@@ -1,0 +1,199 @@
+breed [ddrcs ddrc] ; ddrc: DDR-coin
+ddrcs-own [node-id p_detect fullary layer]
+
+;; TreeFill-p procedures ----------------------------------------------------------------------------
+to setup-ddrc-layers
+  let last-internal-layer (floor (log num-nodes tree-order)) - 1
+  let tree-display-ratio 0.65
+
+  ; default predeploying-const
+  if predeploying-const <= 0 [
+    set predeploying-const 4
+  ]
+
+  ;; placing nodes for dual roles meaning interal node and leaf node
+  let yoffset world-height / (last-internal-layer + 2)
+  let cur-layer 0
+  let ddrc-id num-nodes
+  let root (ddrc ddrc-id)
+  let total-internal-nodes 0
+  while [cur-layer <= last-internal-layer] [
+    let num-nodes-in-layer (tree-order ^ cur-layer)
+    set total-internal-nodes (total-internal-nodes + num-nodes-in-layer)
+    let xoffset world-width * tree-display-ratio / (num-nodes-in-layer + 1)
+    let x 1
+    while [x <= num-nodes-in-layer] [
+      ask ddrc ddrc-id [
+        setxy (min-pxcor + x * xoffset) (max-pycor - yoffset * (cur-layer + 1))
+        set layer cur-layer
+      ]
+      set ddrc-id (ddrc-id + 1)
+      set x (x + 1)
+    ]
+    set cur-layer (cur-layer + 1)
+  ]
+  ask patch ([pxcor] of root + 5) max-pycor [ set plabel "Internal Nodes (dual roles)" ]
+
+  ;; remaining other nodes
+  let num-other-nodes (num-nodes - total-internal-nodes)
+  let num-created 0
+  let num-col floor (sqrt num-other-nodes)
+  let other-nodes-width (world-width * (1 - tree-display-ratio))
+  let xoffset other-nodes-width / (num-col + 1)
+  let num-row ceiling (num-other-nodes / num-col)
+  set yoffset world-height / (num-row + 1)
+  let i 1
+  let j 1
+  while [ i <= num-row and (num-created < num-other-nodes) ]
+  [
+    set j 1
+    while [ j <= num-col and (num-created < num-other-nodes) ]
+    [
+      ask ddrc ddrc-id [
+        setxy (max-pxcor - other-nodes-width + j * xoffset) (max-pycor - i * yoffset)
+        set layer cur-layer
+      ]
+      set ddrc-id (ddrc-id + 1)
+      set num-created num-created + 1
+      set j j + 1
+    ]
+    set i i + 1
+  ]
+  ask patch (max-pxcor + 3 - other-nodes-width / 2) max-pycor
+  [ set plabel "Other nodes" ]
+
+  let num-dummy-detects predeploying-const * sqrt num-nodes
+  (ifelse
+    given-triggers < num-nodes [
+      set num-dummy-detects num-nodes - given-triggers
+    ]
+    num-dummy-detects >= num-nodes [
+      set num-dummy-detects num-nodes - 1
+    ])
+  if is-log-level-debug [print (word "Num dummy detect msgs: " num-dummy-detects)]
+  set i 0
+  while [i < num-dummy-detects] [
+    let leaf-inner-node [node-id] of (one-of ddrcs with [layer = last-internal-layer])
+    if is-log-level-debug [ print (word "send dummy detect to " leaf-inner-node ) ]
+    send-message leaf-inner-node "detect" []
+    set i i + 1
+  ]
+
+  if is-log-level-debug [
+    ask tfs [
+      print (word who ": node-id(" node-id "), p_detect(" p_detect "), fullary(" fullary "), layer(" layer ")")
+    ]
+  ]
+end
+
+to handle-trigger-ddrc
+  let rnd random-float 1.0
+  if rnd <= p_detect [
+    let last-internal-layer (floor (log num-nodes tree-order)) - 1
+    let internal-node [node-id] of (one-of ddrcs with [layer = last-internal-layer])
+    if is-log-level-trace [ print (word "send detect from leaf-layer to " internal-node " which is in layer " last-internal-layer) ]
+    send-message internal-node "detect" []
+  ]
+end
+
+to handle-msg-ddrc [msg vals]
+  (ifelse
+    msg = "detect" [
+      if is-log-level-trace [print (word "receiving detect, node " node-id " fullary: " fullary)]
+      ifelse
+      is-full self [
+        let cur-layer layer
+        let upper-node [node-id] of (one-of ddrcs with [layer = cur-layer - 1])
+        if is-log-level-debug [ print (word "forward detect to " upper-node " which is in layer " (layer - 1)) ]
+        send-message upper-node "detect" []
+      ] [
+        let i get-empty-spot-in-fullary self
+        ifelse is-last-internal-layer self [
+          set fullary replace-item i fullary 1
+          if is-full self [
+            set color red
+            let pid (get-parent-id node-id)
+            if is-log-level-debug [ print (word "send full to " pid " which is in layer " (layer - 1)) ]
+            send-message pid "full" (list node-id)
+          ]
+        ] [
+          let cid (get-child-id node-id i)
+          if is-log-level-debug [ print (word "forward detect to " cid " which is in layer "  (layer + 1)) ]
+          send-message cid "detect" []
+        ]
+      ]
+    ]
+    msg = "full" [
+      if is-log-level-debug [print (word "receiving full, node " node-id " fullary: " fullary)]
+      let child-idx get-child-idx node-id (item 0 vals)
+      set fullary replace-item child-idx fullary 1
+      if is-full self [
+        set color red
+        ifelse not is-root self [
+          ; in an inner node, when it receives a full-message and it is already full, it forwards the full-message to its parent
+          let pid get-parent-id node-id
+          send-message pid "full" (list node-id)
+        ] [
+          ; start end-of-round process
+          if is-log-level-debug [
+            print (word "Start end-of-round process by aggregating triggers at the root " node-id)
+          ]
+          ; start aggregation
+          set is-end-of-round true
+          foreach [child-ids] of node node-id [
+            cid -> send-message cid "aggregate-triggers" []
+          ]
+        ]
+      ]
+    ]
+    msg = "initiate-next-round" [
+      let w-hat item 0 vals
+      set cur-round (cur-round + 1)
+      let new-p_detect num-nodes / w-hat
+      print (word "New round: " cur-round ", W-hat: " w-hat ", p_detect: " new-p_detect)
+
+      set p_detect new-p_detect
+      let i 0
+      while [i < tree-order] [
+        set fullary replace-item i fullary 0
+        set i i + 1
+      ]
+      set color green
+      foreach [child-ids] of node node-id [
+        cid -> send-message cid "propagate-p_detect" (list new-p_detect)
+      ]
+
+      let num-dummy-detects predeploying-const * sqrt num-nodes
+      (ifelse
+        w-hat < num-nodes [
+          set num-dummy-detects num-nodes - w-hat
+        ]
+        num-dummy-detects >= num-nodes [
+          set num-dummy-detects num-nodes - 1
+        ])
+      if is-log-level-debug [print (word "Num dummy detect msgs: " num-dummy-detects)]
+      let last-internal-layer (floor (log num-nodes tree-order)) - 1
+      set i 0
+      while [i < num-dummy-detects] [
+        let leaf-inner-node [node-id] of (one-of ddrcs with [layer = last-internal-layer])
+        if is-log-level-debug [ print (word "send dummy detect to " leaf-inner-node ) ]
+        send-message leaf-inner-node "detect" []
+        set i i + 1
+      ]
+      set is-end-of-round false
+    ]
+    msg = "propagate-p_detect" [
+      let new-p_detect item 0 vals
+      set p_detect new-p_detect
+      let i 0
+      while [i < tree-order] [
+        set fullary replace-item i fullary 0
+        set i i + 1
+      ]
+      set color green
+      foreach [child-ids] of node node-id [
+        cid -> send-message cid "propagate-p_detect" (list new-p_detect)
+      ]
+    ]
+  )
+end

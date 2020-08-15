@@ -1,0 +1,240 @@
+breed [tfs tf] ; tf: TreeFill
+tfs-own [node-id threshold triggers-cnt fullary layer]
+
+;; TreeFill procedures ------------------------------------------------------------------------------
+to setup-tf-layers
+  let last-internal-layer (floor (log num-nodes tree-order)) - 1
+  let tree-display-ratio 0.65
+
+  ;; placing nodes for dual roles meaning interal node and leaf node
+  let yoffset world-height / (last-internal-layer + 2)
+  let cur-layer 0
+  let tf-id num-nodes
+  let root (tf tf-id)
+  let total-internal-nodes 0
+  while [cur-layer <= last-internal-layer] [
+    let num-nodes-in-layer (tree-order ^ cur-layer)
+    set total-internal-nodes (total-internal-nodes + num-nodes-in-layer)
+    let xoffset world-width * tree-display-ratio / (num-nodes-in-layer + 1)
+    let x 1
+    while [x <= num-nodes-in-layer] [
+      ask tf tf-id [
+        setxy (min-pxcor + x * xoffset) (max-pycor - yoffset * (cur-layer + 1))
+        set layer cur-layer
+      ]
+      set tf-id (tf-id + 1)
+      set x (x + 1)
+    ]
+    set cur-layer (cur-layer + 1)
+  ]
+  ask patch ([pxcor] of root + 5) max-pycor [ set plabel "Internal Nodes (dual roles)" ]
+
+  ;; remaining other nodes
+  let num-other-nodes (num-nodes - total-internal-nodes)
+  let num-created 0
+  let num-col floor (sqrt num-other-nodes)
+  let other-nodes-width (world-width * (1 - tree-display-ratio))
+  let xoffset other-nodes-width / (num-col + 1)
+  let num-row ceiling (num-other-nodes / num-col)
+  set yoffset world-height / (num-row + 1)
+  let i 1
+  let j 1
+  while [ i <= num-row and (num-created < num-other-nodes) ]
+  [
+    set j 1
+    while [ j <= num-col and (num-created < num-other-nodes) ]
+    [
+      ask tf tf-id [
+        setxy (max-pxcor - other-nodes-width + j * xoffset) (max-pycor - i * yoffset)
+        set layer cur-layer
+      ]
+      set tf-id (tf-id + 1)
+      set num-created num-created + 1
+      set j j + 1
+    ]
+    set i i + 1
+  ]
+  ask patch (max-pxcor + 3 - other-nodes-width / 2) max-pycor
+  [ set plabel "Other nodes" ]
+
+  if is-log-level-debug [
+    ask tfs [
+      print (word who ": node-id(" node-id "), threshold(" threshold "), triggers-cnt(" triggers-cnt
+        "), fullary(" fullary "), layer(" layer ")")
+    ]
+  ]
+end
+
+to handle-trigger-tf
+  set triggers-cnt (triggers-cnt + 1)
+  if triggers-cnt >= threshold [
+    set triggers-cnt (triggers-cnt - threshold)
+    let last-internal-layer (floor (log num-nodes tree-order)) - 1
+    let internal-node [node-id] of (one-of tfs with [layer = last-internal-layer])
+    if is-log-level-trace [ print (word "send detect from leaf-layer to " internal-node " which is in layer " last-internal-layer) ]
+    send-message internal-node "detect" []
+  ]
+end
+
+to-report get-empty-spot-in-fullary [tf-algo]
+  let i 0
+  while [i < tree-order] [
+    if (item i ([fullary] of tf-algo)) <= 0 [
+      report i
+    ]
+    set i i + 1
+  ]
+  report -1
+end
+
+to-report is-full [tf-algo]
+  report -1 = get-empty-spot-in-fullary tf-algo
+end
+
+to-report is-root [tf-algo]
+  report 0 = [layer] of tf-algo
+end
+
+to-report is-last-internal-layer [tf-algo]
+  let last-internal-layer (floor (log num-nodes tree-order)) - 1
+  report last-internal-layer = [layer] of tf-algo
+end
+
+to-report get-parent-id [id]
+  report floor((id - 1) / tree-order)
+end
+
+to-report get-child-id [nd-id idx]
+  report (nd-id * tree-order + idx + 1)
+end
+
+to-report get-child-idx [nd-id child-id]
+  report child-id - 1 - nd-id * tree-order
+end
+
+to handle-msg-tf [msg vals]
+  (ifelse
+    msg = "detect" [
+      if is-log-level-trace [print (word "receiving detect, node " node-id " fullary: " fullary)]
+      ifelse
+      is-full self [
+        let cur-layer layer
+        let upper-node [node-id] of (one-of tfs with [layer = cur-layer - 1])
+        if is-log-level-debug [ print (word "forward detect to " upper-node " which is in layer " (layer - 1)) ]
+        send-message upper-node "detect" []
+      ] [
+        let i get-empty-spot-in-fullary self
+        ifelse is-last-internal-layer self [
+          set fullary replace-item i fullary 1
+          if is-full self [
+            set color red
+            let pid (get-parent-id node-id)
+            if is-log-level-debug [ print (word "send full to " pid " which is in layer " (layer - 1)) ]
+            send-message pid "full" (list node-id)
+          ]
+        ] [
+          let cid (get-child-id node-id i)
+          if is-log-level-debug [ print (word "forward detect to " cid " which is in layer "  (layer + 1)) ]
+          send-message cid "detect" []
+        ]
+      ]
+    ]
+    msg = "full" [
+      if is-log-level-debug [print (word "receiving full, node " node-id " fullary: " fullary)]
+      let child-idx get-child-idx node-id (item 0 vals)
+      set fullary replace-item child-idx fullary 1
+      if is-full self [
+        set color red
+        ifelse not is-root self [
+          ; in an inner node, when it receives a full-message and it is already full, it forwards the full-message to its parent
+          let pid get-parent-id node-id
+          send-message pid "full" (list node-id)
+        ] [
+          ; start end-of-round process
+          if is-log-level-debug [
+            print (word "Start end-of-round process by aggregating triggers at the root " node-id)
+          ]
+          ; this is final round condition
+          if (given-triggers - num-detected-triggers) < num-nodes [
+            set num-detected-triggers given-triggers
+            end-of-round-update 0
+            print (word "[TreeFill] Aggregated triggers: " num-detected-triggers ", verifying it with debug aggregation: " aggregate-detected-triggers-for-debug)
+            print "DETECT ALL THE TRIGGERS!! stop simulation"
+            stop
+          ]
+          ; prepare next round
+          let leaf-layer floor (log num-nodes tree-order)
+          let num-detect-msgs tree-order ^ leaf-layer
+          let num-detected num-detect-msgs * threshold
+          if (given-triggers - num-detected-triggers) < 2 * num-nodes [
+            set num-detected num-nodes
+          ]
+          set is-end-of-round true
+          ifelse (given-triggers - num-detected-triggers - num-detected) > num-nodes [
+            set num-detected-triggers num-detected-triggers + num-detected
+            print (word "[TreeFill] Aggregated triggers: " num-detected-triggers)
+            let w-hat given-triggers - num-detected-triggers
+            end-of-round-update w-hat
+            send-message node-id "initiate-next-round" (list w-hat)
+          ] [
+            foreach [child-ids] of node node-id [
+              cid -> send-message cid "aggregate-triggers" []
+            ]
+          ]
+        ]
+      ]
+    ]
+    msg = "initiate-next-round" [
+      let w-hat item 0 vals
+      set cur-round (cur-round + 1)
+      let new-threshold floor(w-hat / (2 * num-nodes))
+      if new-threshold < 1 [set new-threshold 1]
+      print (word "New round: " cur-round ", W-hat: " w-hat ", threshold: " new-threshold)
+      set threshold new-threshold
+      let i 0
+      while [i < tree-order] [
+        set fullary replace-item i fullary 0
+        set i i + 1
+      ]
+      set color green
+      foreach [child-ids] of node node-id [
+        cid -> send-message cid "propagate-threshold" (list new-threshold)
+      ]
+      if w-hat < num-nodes [
+        let num-dummy-detects num-nodes - w-hat
+        let last-internal-layer (floor (log num-nodes tree-order)) - 1
+        set i 0
+        while [i < num-dummy-detects] [
+          let leaf-inner-node [node-id] of (one-of tfs with [layer = last-internal-layer])
+          send-message leaf-inner-node "detect" []
+          if is-log-level-debug [ print (word "send dummy detect to " leaf-inner-node ) ]
+          set i i + 1
+        ]
+      ]
+      set is-end-of-round false
+      ; each tf node need to create detect messages if needed with a new threshold
+      ask tfs [
+        while [triggers-cnt >= threshold] [
+          set triggers-cnt (triggers-cnt - threshold)
+          let last-internal-layer (floor (log num-nodes tree-order)) - 1
+          let internal-node [node-id] of (one-of tfs with [layer = last-internal-layer])
+          if is-log-level-trace [ print (word "send detect from leaf-layer to " internal-node " which is in layer " last-internal-layer) ]
+          send-message internal-node "detect" []
+        ]
+      ]
+    ]
+    msg = "propagate-threshold" [
+      let new-threshold item 0 vals
+      set threshold new-threshold
+      let i 0
+      while [i < tree-order] [
+        set fullary replace-item i fullary 0
+        set i i + 1
+      ]
+      set color green
+      foreach [child-ids] of node node-id [
+        cid -> send-message cid "propagate-threshold" (list new-threshold)
+      ]
+    ]
+  )
+end

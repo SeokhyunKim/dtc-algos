@@ -1,0 +1,111 @@
+breed [crnds crnd] ; crnd: CoinRand
+crnds-own [node-id tau leaf-coin-layer triggers-cnt coins-cnt layer]
+
+;; CoinRand procedures ------------------------------------------------------------------------------
+to setup-crnd-layers
+  let last-internal-layer (floor (log num-nodes 2)) - 1
+  let tree-display-ratio 0.65
+
+  ;; placing nodes for dual roles meaning interal node and leaf node
+  let yoffset world-height / (last-internal-layer + 2)
+  let cur-layer 0
+  let crnd-id num-nodes
+  let root (crnd crnd-id)
+  while [cur-layer <= last-internal-layer] [
+    let num-nodes-in-layer (2 ^ cur-layer)
+    let xoffset world-width * tree-display-ratio / (num-nodes-in-layer + 1)
+    let x 1
+    while [x <= num-nodes-in-layer] [
+      ask crnd crnd-id [
+        setxy (min-pxcor + x * xoffset) (max-pycor - yoffset * (cur-layer + 1))
+        set layer cur-layer
+        set leaf-coin-layer last-internal-layer
+      ]
+      set crnd-id (crnd-id + 1)
+      set x (x + 1)
+    ]
+    set cur-layer (cur-layer + 1)
+  ]
+  ask patch ([pxcor] of root + 5) max-pycor [ set plabel "Internal Nodes (dual roles)" ]
+
+  ;; remaining one node
+  ask crnd crnd-id [set layer cur-layer]
+  let xoffset-other world-width * (1 - tree-display-ratio) / 2
+  let yoffset-other world-height / 2
+  let other-node (crnd crnd-id)
+  ask other-node [setxy max-pxcor - xoffset-other max-pycor - yoffset-other]
+  ask patch ([pxcor] of other-node + 8) max-pycor [
+    set plabel "Other node (doing only leaf node)"
+  ]
+
+  if is-log-level-debug [
+    ask crnds [
+      print (word who ": node-id(" node-id "), tau(" tau "), leaf-coin-layer(" leaf-coin-layer
+        "), layer(" layer "), triggers-cnt(" triggers-cnt "), coins-cnt(" coins-cnt ")")
+    ]
+  ]
+end
+
+to handle-trigger-crnd
+  set triggers-cnt (triggers-cnt + 1)
+  if triggers-cnt >= tau [
+    set triggers-cnt (triggers-cnt - tau)
+    let internal-node [node-id] of (one-of crnds with [layer = leaf-coin-layer])
+    send-message internal-node "coin" []
+    if is-log-level-debug [ print (word "send coin from leaf-layer to " internal-node " which is in layer " leaf-coin-layer) ]
+  ]
+end
+
+to handle-msg-crnd [msg vals]
+  (ifelse
+    msg = "coin" [
+      set coins-cnt (coins-cnt + 1)
+      ifelse layer > 0 [
+        if coins-cnt > 1 [
+          set color red
+          let upper-layer layer - 1
+          let upper-node [node-id] of (one-of crnds with [layer = upper-layer])
+          send-message upper-node "coin" []
+          if is-log-level-debug [ print (word "send coin to a node of upper-layer: " upper-node) ]
+        ]
+      ] [
+        set color red
+        ; start end-of-round process
+        if is-log-level-debug [
+          print (word "Start end-of-round process by aggregating triggers at the root " node-id)
+        ]
+        set is-end-of-round true
+        foreach [child-ids] of node node-id [
+          cid -> send-message cid "aggregate-triggers" []
+        ]
+      ]
+    ]
+    msg = "initiate-next-round" [
+      let w-hat item 0 vals
+      set cur-round (cur-round + 1)
+      set tau ceiling (w-hat / (4 * num-nodes))
+      if w-hat < num-nodes [
+        let k floor (log (2 * num-nodes / w-hat) 2) ;; THIS MIGHT BE A SMALL PROBLEM OF CoinRand. USED (2 * num-nodes) INSTEAD OF num-nodes TO FIX THE ISSUE.
+        set leaf-coin-layer ((floor (log num-nodes 2)) - k - 1)
+        if leaf-coin-layer < 0 [ set leaf-coin-layer 0 ]
+        print (word "New leaf-coin-layer: " leaf-coin-layer)
+      ]
+      print (word "New round: " cur-round ", W-hat: " w-hat ", tau: " tau)
+      set color green
+      foreach [child-ids] of node node-id [
+        cid -> send-message cid "propagate-tau" (list tau leaf-coin-layer)
+      ]
+      set coins-cnt 0
+      set is-end-of-round false
+    ]
+    msg = "propagate-tau" [
+      if is-log-level-debug [ print (word "propagating tau at " node-id ", " vals) ]
+      set tau item 0 vals
+      set leaf-coin-layer item 1 vals
+      set coins-cnt 0
+      set color green
+      foreach [child-ids] of node node-id [
+        cid -> send-message cid "propagate-tau" vals
+      ]
+    ])
+end

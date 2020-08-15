@@ -1,0 +1,83 @@
+breed [rrnds rrnd] ; rrnd: RingRand
+rrnds-own [node-id p_collect next-rrnd-id]
+
+;; RingRand procedures ------------------------------------------------------------------------------
+to setup-rrnd-topology
+  let cur-node 0
+  let r (world-height - 3) / 2
+  let unit_angle (360 / num-nodes)
+  while [cur-node < num-nodes] [
+    ask rrnd [algo-id] of (node cur-node) [
+      set next-rrnd-id ((cur-node + 1) mod num-nodes)
+      let angle (unit_angle * cur-node)
+      let x (r * cos angle)
+      let y (r * sin angle)
+      if is-log-level-trace [
+        print (word node-id": angle(" angle "), x(" x "), y(" y ")")
+      ]
+      setxy x y
+    ]
+    set cur-node cur-node + 1
+  ]
+  if is-log-level-debug [
+    ask rrnds [
+      print (word who": node-id(" node-id "), next-rrnd-id(" next-rrnd-id ")")
+    ]
+  ]
+end
+
+to handle-trigger-rrnd
+    let rnd random-float 1.0
+    if rnd <= p_collect [
+        let trgs-so-far [num-triggers] of (node node-id)
+        if is-log-level-trace [
+            print (word "Start collecting at " node-id " with " trgs-so-far " triggers")
+        ]
+        send-message next-rrnd-id "collect" (list trgs-so-far node-id)
+    ]
+end
+
+to handle-msg-rrnd [msg vals]
+    (ifelse
+        msg = "collect" [
+            if is-log-level-trace [
+                print (word "receiving collect at " node-id ": " vals)
+            ]
+            let collected-trgs (item 0 vals)
+            let init-node-id (item 1 vals)
+            ifelse init-node-id = node-id [
+                if collected-trgs >= ceiling (w-hat-last-round / 2) [
+                    ; end-of-round
+                    set num-detected-triggers collected-trgs
+                    set cur-round (cur-round + 1)
+                    let w-hat given-triggers - collected-trgs
+                    end-of-round-update w-hat
+                    ifelse w-hat > (8 * num-nodes) [
+                        set p_collect (8 * num-nodes / w-hat)
+                    ] [
+                        set p_collect 1.0
+                    ]
+                    send-message next-rrnd-id "next-round" (list w-hat node-id)
+                    print (word "New round: " cur-round ", W-hat: " w-hat ",p_collect: " p_collect)
+                ] 
+            ] [
+                let trgs-so-far [num-triggers] of (node node-id)
+                set collected-trgs collected-trgs + trgs-so-far
+                send-message next-rrnd-id "collect" (list collected-trgs init-node-id)
+            ]
+        ]
+        msg = "next-round" [
+            let w-hat (item 0 vals)
+            let init-node-id (item 1 vals)
+            ifelse w-hat > (8 * num-nodes) [
+                set p_collect (8 * num-nodes / w-hat)
+            ] [
+                set p_collect 1.0
+            ]
+            if init-node-id != node-id [
+                send-message next-rrnd-id "next-round" vals
+            ]
+        ]
+    )
+end
+
