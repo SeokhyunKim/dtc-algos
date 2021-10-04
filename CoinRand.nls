@@ -74,7 +74,7 @@ to handle-msg-crnd [msg vals]
         if is-log-level-debug [
           print (word "Start end-of-round process by aggregating triggers at the root " node-id)
         ]
-        set is-end-of-round true
+        set IS_END_OF_ROUND true
         foreach [child-ids] of node node-id [
           cid -> send-message cid "aggregate-triggers" []
         ]
@@ -82,7 +82,7 @@ to handle-msg-crnd [msg vals]
     ]
     msg = "initiate-next-round" [
       let w-hat item 0 vals
-      set cur-round (cur-round + 1)
+      set CUR_ROUND (CUR_ROUND + 1)
       set tau ceiling (w-hat / (4 * num-nodes))
       if w-hat < num-nodes [
         let k floor (log (2 * num-nodes / w-hat) 2) ;; THIS MIGHT BE A SMALL PROBLEM OF CoinRand. USED (2 * num-nodes) INSTEAD OF num-nodes TO FIX THE ISSUE.
@@ -90,13 +90,13 @@ to handle-msg-crnd [msg vals]
         if leaf-coin-layer < 0 [ set leaf-coin-layer 0 ]
         print (word "New leaf-coin-layer: " leaf-coin-layer)
       ]
-      print (word "New round: " cur-round ", W-hat: " w-hat ", tau: " tau)
+      print (word "New round: " CUR_ROUND ", W-hat: " w-hat ", tau: " tau)
       set color green
       foreach [child-ids] of node node-id [
         cid -> send-message cid "propagate-tau" (list tau leaf-coin-layer)
       ]
       set coins-cnt 0
-      set is-end-of-round false
+      set IS_END_OF_ROUND false
     ]
     msg = "propagate-tau" [
       if is-log-level-debug [ print (word "propagating tau at " node-id ", " vals) ]

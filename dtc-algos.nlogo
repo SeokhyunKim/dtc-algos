@@ -1,16 +1,48 @@
-__includes [ "TreeFill.nls" "DDR-coin.nls" "CoinRand.nls" "RingRand.nls" ]
+__includes [ "TreeFill.nls" "DDR-coin.nls" "CoinRand.nls" "RingRand.nls" "CT.nls" ]
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Global variables common to all DTC algorithms ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 globals [
-  cur-round ; current round number
-  gen-triggers ; the number of generated triggers so far in go procedure
-  num-exchanged-messages ; the number of exchanged messages between nodes so far
-  max-rcvd ; current maximum number of received messages at each node
-  num-detected-triggers ; total number of detected triggers by all the nodes so far
-  w-hat-last-round ; not yet detected triggers when a round begins
-  is-end-of-round ; some DTC algos need this to make it work
-  debug-output ; debug output level. 0 info, 1 debug, 2 trace
+  CUR_ROUND ; current round number
+  GEN_TRIGGERS ; the number of generated triggers so far in go procedure
+  NUM_EXCHANGED_MESSAGES ; the number of exchanged messages between nodes so far
+  MAX_RCVD ; current maximum number of received messages at each node
+  NUM_DETECTED_TRIGGERS ; total number of detected triggers by all the nodes so far
+  W_HAT_LAST_ROUND ; not yet detected triggers when a round begins
+  IS_END_OF_ROUND ; some DTC algos need this to make it work
+  DEBUG_OUTPUT ; debug output level. 0 info, 1 debug, 2 trace
 ]
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Note on the relationship between node and algo in this simulation ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Netlogo is not an OOP language. There is no concept like member function.
+; But, breed is close to the object or class concept shown in many OOP languages.
+;
+; In this simulation, by using breed, defined 'nodes' and 'node' to implement set of node agents and individual node agent
+; running a DTC algorithm. (Note that Netlogo uses turtle to represent an agentin a simulation)
+; The node turtle has attributes to count the numbers of received triggers, received messages. It is also providing
+; trigger aggregation for all the DTC algorithms running in this simulation.
+;
+; Each node runs a DTC algorithm. Using the simulation UI, you can select a DTC algorithm you want to run on a node.
+; The DTC algorithm running on a node is implemented with intrinsic breed for each DTC algorithm. DTC algorithms are
+; defined in separate files: TreeFill.nls, DDR-coin.nls, CoinRand.nls, RingRand.nls, and CT.nls.
+;
+; When a simulation is initialized, nodes are created and each node is associated with one DTC algorithm turtle.
+; The algo-id in node is for binding a DTC algorithm turtle with a node. Setup-nodes command is doing the initialization.
+; It internally calls create-one-algo with user selected DTC algorithm type, and it returns a new DTC algorithm turtle.
+; Then, node and DTC algorithm turtles are related by having the id of each other.
+;
+; All the node interaction is done by exchanging messages. Send-message command is used to send a message to a node in a simulation.
+; There are some messages understood at node level and handled by node; trigger-aggregation messages are handled by node so all the
+; DTC algorithm simulation can share trigger-aggregation logic. Other message types are all different for the DTC algorithms.
+; So, other than trigger-aggregation messages, all other messages are forwarded to DTC algorithm turtle. This part is implemented in
+; handle-msg command.
+;
+; Each DTC algorithm file has logics to process specific message types for it. DTC algorithm turtles will exchange messages to detect
+; when all the detected triggers by all the nodes in simulation reaches up until a predefined threshold for detected triggers is met.
 breed [nodes node]
 nodes-own [num-triggers num-received-msgs parent-id child-ids algo-id num-aggregate-responses aggregated-triggers]
 
@@ -19,20 +51,20 @@ to setup
   clear-all
 
   ; control debug output here
-  set debug-output 0
+  set DEBUG_OUTPUT 0
   print (word "setup. num-nodes: " num-nodes)
   set num-nodes adjust-num-nodes
   print (word "adjusted num-nodes: " num-nodes)
 
-  set cur-round 1
-  set gen-triggers 0
-  set num-exchanged-messages 0
-  set max-rcvd 0
-  set num-detected-triggers 0
-  set w-hat-last-round given-triggers
-  set is-end-of-round false
+  set CUR_ROUND 1
+  set GEN_TRIGGERS 0
+  set NUM_EXCHANGED_MESSAGES 0
+  set MAX_RCVD 0
+  set NUM_DETECTED_TRIGGERS 0
+  set W_HAT_LAST_ROUND given-triggers
+  set IS_END_OF_ROUND false
 
-  setup-visuals
+  setup-visual-settings
   setup-nodes
   setup-algos
   reset-ticks
@@ -47,43 +79,44 @@ to setup
     if dtc-algo = "DDR-coin" [
       file-print(word "# predeploying-const: " predeploying-const)
     ]
-    file-print "# round, num-exchanged-messages, max-rcvd, w-hat, detected-triggers"
+    file-print "# round, NUM_EXCHANGED_MESSAGES, MAX_RCVD, w-hat, detected-triggers"
   ]
 end
 
 to end-of-round-update [w-hat]
   if result-file [
-    file-print (word cur-round ", " num-exchanged-messages ", " max-rcvd ", " w-hat-last-round ", " num-detected-triggers)
+    file-print (word CUR_ROUND ", " NUM_EXCHANGED_MESSAGES ", " MAX_RCVD ", " W_HAT_LAST_ROUND ", " NUM_DETECTED_TRIGGERS)
   ]
-  set w-hat-last-round w-hat
+  set W_HAT_LAST_ROUND w-hat
 end
 
 to-report is-log-level-info
-  report debug-output >= 0
+  report DEBUG_OUTPUT >= 0
 end
 
 to-report is-log-level-debug
-  report debug-output >= 1
+  report DEBUG_OUTPUT >= 1
 end
 
 to-report is-log-level-trace
-  report debug-output >= 2
+  report DEBUG_OUTPUT >= 2
 end
 
 to-report adjust-num-nodes
   report (ifelse-value
     dtc-algo = "CoinRand" [ 2 ^ floor (log num-nodes 2) ]
-    (dtc-algo = "TreeFill" or dtc-algo = "DDR-coin")
+    (dtc-algo = "TreeFill" or dtc-algo = "DDR-coin" or dtc-algo = "CT")
     [ tree-order ^ floor (log num-nodes tree-order) ]
     (dtc-algo = "RingRand")
     [ num-nodes ])
 end
 
-to setup-visuals
+to setup-visual-settings
   set-default-shape crnds "circle"
   set-default-shape rrnds "circle"
   set-default-shape tfs "circle"
   set-default-shape ddrcs "circle"
+  set-default-shape csts "circle"
   ask patches [
     set pcolor white
     set plabel-color black
@@ -166,6 +199,14 @@ to create-one-algo
         ]
         set color green
       ]
+  ]
+  dtc-algo = "CT" [
+      create-csts 1 [
+        set triggers-cnt 0
+        set detects-cnt 0
+        set remaining-triggers 0
+        set color green
+      ]
   ])
 end
 
@@ -174,20 +215,21 @@ to setup-algos
   dtc-algo = "CoinRand" [setup-crnd-layers]
   dtc-algo = "RingRand" [setup-rrnd-topology]
   dtc-algo = "TreeFill" [setup-tf-layers]
-  dtc-algo = "DDR-coin" [setup-ddrc-layers])
+  dtc-algo = "DDR-coin" [setup-ddrc-layers]
+  dtc-algo = "CT"       [setup-cst-layers])
 end
 
 to go
-  if num-detected-triggers >= given-triggers [
-    print (word "Simulation stopped. num-detected-triggers: " num-detected-triggers ", num-generated-triggers: " gen-triggers)
+  if NUM_DETECTED_TRIGGERS >= given-triggers [
+    print (word "Simulation stopped. NUM_DETECTED_TRIGGERS: " NUM_DETECTED_TRIGGERS ", num-generated-triggers: " GEN_TRIGGERS)
     if result-file [
       file-close
     ]
     stop
   ]
-  if (gen-triggers < given-triggers) and (not is-end-of-round) [
+  if (GEN_TRIGGERS < given-triggers) and (not IS_END_OF_ROUND) [
     ask one-of nodes [ handle-trigger ]
-    set gen-triggers (gen-triggers + 1)
+    set GEN_TRIGGERS (GEN_TRIGGERS + 1)
   ]
   tick
 end
@@ -206,6 +248,9 @@ to handle-trigger
   ]
   dtc-algo = "DDR-coin" [
       ask ddrc algo-id [handle-trigger-ddrc]
+  ]
+  dtc-algo = "CT" [
+      ask cst algo-id [handle-trigger-cst]
   ])
 end
 
@@ -231,14 +276,14 @@ to handle-msg [msg vals]
           if is-log-level-debug [
             print (word "Aggregated triggers at the root: " (aggregated-triggers + num-triggers) " (children: " aggregated-triggers ", root: " num-triggers ")")
           ]
-          set num-detected-triggers (aggregated-triggers + num-triggers)
+          set NUM_DETECTED_TRIGGERS (aggregated-triggers + num-triggers)
           ifelse is-log-level-debug [
-            print (word "Aggregated triggers: " num-detected-triggers ", debug aggregation: " aggregate-detected-triggers-for-debug)
+            print (word "Aggregated triggers: " NUM_DETECTED_TRIGGERS ", debug aggregation: " aggregate-detected-triggers-for-debug)
           ] [
-            print (word "Aggregated triggers: " num-detected-triggers)
+            print (word "Aggregated triggers: " NUM_DETECTED_TRIGGERS)
           ]
 
-          let w-hat given-triggers - num-detected-triggers
+          let w-hat given-triggers - NUM_DETECTED_TRIGGERS
           end-of-round-update w-hat
 
           if w-hat <= 0 [
@@ -262,7 +307,8 @@ to handle-msg [msg vals]
         dtc-algo = "CoinRand" [ask crnd algo-id [handle-msg-crnd msg vals]]
         dtc-algo = "RingRand" [ask rrnd algo-id [handle-msg-rrnd msg vals]]
         dtc-algo = "TreeFill" [ask tf algo-id [handle-msg-tf msg vals]]
-        dtc-algo = "DDR-coin" [ask ddrc algo-id [handle-msg-ddrc msg vals]])
+        dtc-algo = "DDR-coin" [ask ddrc algo-id [handle-msg-ddrc msg vals]]
+        dtc-algo = "CT"       [ask cst algo-id [handle-msg-cst msg vals]])
     ]
   )
 end
@@ -270,11 +316,11 @@ end
 to send-message [to-id msg vals]
   ; this will make too many logs. manually uncomment this when trace-level degugging is required
   ;print (word msg ": " to-id ", " vals)
-  set num-exchanged-messages (num-exchanged-messages + 1)
+  set NUM_EXCHANGED_MESSAGES (NUM_EXCHANGED_MESSAGES + 1)
   ask node to-id [
     set num-received-msgs (num-received-msgs + 1)
-    if num-received-msgs > max-rcvd [
-      set max-rcvd num-received-msgs
+    if num-received-msgs > MAX_RCVD [
+      set MAX_RCVD num-received-msgs
     ]
     handle-msg msg vals
   ]
@@ -356,8 +402,8 @@ CHOOSER
 95
 dtc-algo
 dtc-algo
-"TreeFill" "DDR-coin" "CoinRand" "RingRand"
-1
+"TreeFill" "DDR-coin" "CoinRand" "RingRand" "CT"
+4
 
 INPUTBOX
 18
@@ -365,7 +411,7 @@ INPUTBOX
 94
 165
 num-nodes
-16.0
+27.0
 1
 0
 Number
@@ -376,7 +422,7 @@ MONITOR
 123
 405
 cur-round
-cur-round
+CUR_ROUND
 17
 1
 11
@@ -384,10 +430,10 @@ cur-round
 MONITOR
 138
 360
-309
+322
 405
-NIL
 num-exchanged-messages
+NUM_EXCHANGED_MESSAGES
 17
 1
 11
@@ -398,7 +444,7 @@ INPUTBOX
 126
 239
 tree-order
-2.0
+3.0
 1
 0
 Number
@@ -430,7 +476,7 @@ MONITOR
 485
 405
 num-detected-triggers
-num-detected-triggers
+NUM_DETECTED_TRIGGERS
 17
 1
 11
@@ -451,8 +497,8 @@ true
 true
 "" ""
 PENS
-"Exchanged Messages" 1.0 0 -16777216 true "" "plot num-exchanged-messages"
-"DetectedTriggers" 1.0 0 -13345367 true "" "plot num-detected-triggers"
+"Exchanged Messages" 1.0 0 -16777216 true "" "plot NUM_EXCHANGED_MESSAGES"
+"DetectedTriggers" 1.0 0 -13345367 true "" "plot NUM_DETECTED_TRIGGERS"
 
 MONITOR
 503
@@ -460,7 +506,7 @@ MONITOR
 595
 405
 max-rcvd
-max-rcvd
+MAX_RCVD
 17
 1
 11
