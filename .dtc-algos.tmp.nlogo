@@ -51,7 +51,7 @@ to setup
   clear-all
 
   ; control debug output here
-  set DEBUG_OUTPUT 2
+  set DEBUG_OUTPUT
   print (word "setup. num-nodes: " num-nodes)
   set num-nodes adjust-num-nodes
   print (word "adjusted num-nodes: " num-nodes)
