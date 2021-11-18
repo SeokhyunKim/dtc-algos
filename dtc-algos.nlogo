@@ -46,7 +46,7 @@ globals [
 breed [nodes node]
 nodes-own [num-triggers num-received-msgs parent-id child-ids algo-id num-aggregate-responses aggregated-triggers]
 
-
+; called when the setup button on the interface is clicked
 to setup
   clear-all
 
@@ -133,6 +133,7 @@ to setup-nodes
     set hidden? true
   ]
   ; parent-child relationship is for making tree for aggregation process happening at the end of some DTC algos.
+  ; node 0's childs are 1 and 2. node 1's childs are 3 and 4. etc.
   let nid 0
   while [nid < num-nodes] [
     let pid floor ((nid - 1) / 2)
@@ -142,10 +143,12 @@ to setup-nodes
     ]
     set nid (nid + 1)
   ]
-  ; having node and algo know each other's ids to make interaction easier.
+  ; Let nodes and algos know each other's ids to make interaction easier.
   let next-id count nodes
   set nid 0
   while [nid < num-nodes] [
+    ; create one new algo where the id of new algo begins at num-nodes.
+    ; So, (node-algo) relations would be (0, num-nodes), (1, num-nodes + 1), ...
     create-one-algo
     ask node nid [set algo-id next-id]
     ask turtle [algo-id] of (node nid) [set node-id nid]
@@ -314,8 +317,9 @@ to handle-msg [msg vals]
 end
 
 to send-message [to-id msg vals]
-  ; this will make too many logs. manually uncomment this when trace-level degugging is required
-  ;print (word msg ": " to-id ", " vals)
+  if is-log-level-trace [
+    print (word msg ": " to-id ", " vals)
+  ]
   set NUM_EXCHANGED_MESSAGES (NUM_EXCHANGED_MESSAGES + 1)
   ask node to-id [
     set num-received-msgs (num-received-msgs + 1)
@@ -885,7 +889,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.2.0
+NetLogo 6.2.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@

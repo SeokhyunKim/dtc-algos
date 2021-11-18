@@ -1,0 +1,33 @@
+; utility functions
+
+to setup-visual-settings
+  set-default-shape crnds "circle"
+  set-default-shape rrnds "circle"
+  set-default-shape tfs "circle"
+  set-default-shape ddrcs "circle"
+  set-default-shape csts "circle"
+  ask patches [
+    set pcolor white
+    set plabel-color black
+  ]
+end
+
+to-report aggregate-detected-triggers-for-debug
+  let tot-trgs 0
+  ask nodes [
+    set tot-trgs (tot-trgs + num-triggers)
+  ]
+  report tot-trgs
+end
+
+to-report is-log-level-info
+  report DEBUG_OUTPUT >= 0
+end
+
+to-report is-log-level-debug
+  report DEBUG_OUTPUT >= 1
+end
+
+to-report is-log-level-trace
+  report DEBUG_OUTPUT >= 2
+end
