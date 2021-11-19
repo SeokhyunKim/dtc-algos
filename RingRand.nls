@@ -46,10 +46,10 @@ to handle-msg-rrnd [msg vals]
             let collected-trgs (item 0 vals)
             let init-node-id (item 1 vals)
             ifelse init-node-id = node-id [
-                if collected-trgs >= ceiling (w-hat-last-round / 2) [
+                if collected-trgs >= ceiling (W_HAT_LAST_ROUND / 2) [
                     ; end-of-round
-                    set num-detected-triggers collected-trgs
-                    set cur-round (cur-round + 1)
+                    set NUM_DETECTED_TRIGGERS collected-trgs
+                    set CUR_ROUND (CUR_ROUND + 1)
                     let w-hat given-triggers - collected-trgs
                     end-of-round-update w-hat
                     ifelse w-hat > (8 * num-nodes) [
@@ -58,7 +58,7 @@ to handle-msg-rrnd [msg vals]
                         set p_collect 1.0
                     ]
                     send-message next-rrnd-id "next-round" (list w-hat node-id)
-                    print (word "New round: " cur-round ", W-hat: " w-hat ",p_collect: " p_collect)
+                    print (word "New round: " CUR_ROUND ", W-hat: " w-hat ",p_collect: " p_collect)
                 ] 
             ] [
                 let trgs-so-far [num-triggers] of (node node-id)

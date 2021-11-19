@@ -139,7 +139,7 @@ to handle-msg-ddrc [msg vals]
             print (word "Start end-of-round process by aggregating triggers at the root " node-id)
           ]
           ; start aggregation
-          set is-end-of-round true
+          set IS_END_OF_ROUND true
           foreach [child-ids] of node node-id [
             cid -> send-message cid "aggregate-triggers" []
           ]
@@ -148,9 +148,9 @@ to handle-msg-ddrc [msg vals]
     ]
     msg = "initiate-next-round" [
       let w-hat item 0 vals
-      set cur-round (cur-round + 1)
+      set CUR_ROUND (CUR_ROUND + 1)
       let new-p_detect num-nodes / w-hat
-      print (word "New round: " cur-round ", W-hat: " w-hat ", p_detect: " new-p_detect)
+      print (word "New round: " CUR_ROUND ", W-hat: " w-hat ", p_detect: " new-p_detect)
 
       set p_detect new-p_detect
       let i 0
@@ -180,7 +180,7 @@ to handle-msg-ddrc [msg vals]
         send-message leaf-inner-node "detect" []
         set i i + 1
       ]
-      set is-end-of-round false
+      set IS_END_OF_ROUND false
     ]
     msg = "propagate-p_detect" [
       let new-p_detect item 0 vals

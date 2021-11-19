@@ -1,0 +1,133 @@
+breed [csts cst] ; ct: Casscading Thresholds (can't use ct because it is a already used Netlogo command name)
+csts-own [node-id threshold triggers-cnt detects-cnt layer]
+
+;; Cascading Thresholds procedures ------------------------------------------------------------------
+to setup-cst-layers
+  let last-internal-layer (floor (log num-nodes tree-order)) - 1
+  let tree-display-ratio 0.65
+
+  ;; placing nodes for dual roles meaning interal node and leaf node
+  let yoffset world-height / (last-internal-layer + 2)
+  let cur-layer 0
+  let cst-id num-nodes
+  let root (cst cst-id)
+  let total-internal-nodes 0
+  while [cur-layer <= last-internal-layer] [
+    let num-nodes-in-layer (tree-order ^ cur-layer)
+    set total-internal-nodes (total-internal-nodes + num-nodes-in-layer)
+    let xoffset world-width * tree-display-ratio / (num-nodes-in-layer + 1)
+    let x 1
+    while [x <= num-nodes-in-layer] [
+      ask cst cst-id [
+        setxy (min-pxcor + x * xoffset) (max-pycor - yoffset * (cur-layer + 1))
+        set layer cur-layer
+      ]
+      set cst-id (cst-id + 1)
+      set x (x + 1)
+    ]
+    set cur-layer (cur-layer + 1)
+  ]
+  ask patch ([pxcor] of root + 5) max-pycor [ set plabel "Internal Nodes (dual roles)" ]
+
+  ;; remaining other nodes
+  let num-other-nodes (num-nodes - total-internal-nodes)
+  let num-created 0
+  let num-col floor (sqrt num-other-nodes)
+  let other-nodes-width (world-width * (1 - tree-display-ratio))
+  let xoffset other-nodes-width / (num-col + 1)
+  let num-row ceiling (num-other-nodes / num-col)
+  set yoffset world-height / (num-row + 1)
+  let i 1
+  let j 1
+  while [ i <= num-row and (num-created < num-other-nodes) ]
+  [
+    set j 1
+    while [ j <= num-col and (num-created < num-other-nodes) ]
+    [
+      ask cst cst-id [
+        setxy (max-pxcor - other-nodes-width + j * xoffset) (max-pycor - i * yoffset)
+        set layer cur-layer
+      ]
+      set cst-id (cst-id + 1)
+      set num-created num-created + 1
+      set j j + 1
+    ]
+    set i i + 1
+  ]
+  ask patch (max-pxcor + 3 - other-nodes-width / 2) max-pycor
+  [ set plabel "Other nodes" ]
+
+  if is-log-level-debug [
+    ask csts [
+      print (word who ": node-id(" node-id "), threshold(" threshold "), triggers-cnt(" triggers-cnt
+        "), layer(" layer ")")
+    ]
+  ]
+end
+
+to handle-trigger-cst
+  set triggers-cnt (triggers-cnt + 1)
+  if triggers-cnt >= threshold [
+    set triggers-cnt (triggers-cnt - threshold)
+    let last-internal-layer (floor (log num-nodes tree-order)) - 1
+    let internal-node [node-id] of (one-of csts with [layer = last-internal-layer])
+    if is-log-level-trace [ print (word "send detect from leaf-layer to " internal-node " which is in layer " last-internal-layer) ]
+    send-message internal-node "detect" []
+  ]
+end
+
+to handle-msg-cst [msg vals]
+  (ifelse
+    msg = "detect" [
+      if is-log-level-trace [print (word "receiving detect, node " node-id " detects-cnt: " detects-cnt)]
+      let detects-threshold floor(tree-order / 2)
+      set detects-cnt detects-cnt + 1
+      if detects-cnt >= detects-threshold [
+        ifelse is-root self [
+          ask self [send-aggregating-messages-from-root]
+        ] [
+          set detects-cnt detects-cnt - detects-threshold
+          let cur-layer layer
+          let upper-node [node-id] of (one-of csts with [layer = cur-layer - 1])
+          if is-log-level-trace [ print (word "send detect to " upper-node " which is in layer " (layer - 1)) ]
+          send-message upper-node "detect" []
+        ]
+      ]
+    ]
+    msg = "initiate-next-round" [
+      let w-hat item 0 vals
+      set CUR_ROUND (CUR_ROUND + 1)
+      let new-threshold floor(w-hat / (2 * num-nodes))
+      if new-threshold < 1 [set new-threshold 1]
+      print (word "New round: " CUR_ROUND ", W-hat: " w-hat ", threshold: " new-threshold)
+      set color green
+      set threshold new-threshold
+      set detects-cnt 0
+      foreach [child-ids] of node node-id [
+        cid -> send-message cid "propagate-threshold" (list new-threshold)
+      ]
+      set IS_END_OF_ROUND false
+    ]
+    msg = "propagate-threshold" [
+      let new-threshold item 0 vals
+      set threshold new-threshold
+      set color green
+      set detects-cnt 0
+      foreach [child-ids] of node node-id [
+        cid -> send-message cid "propagate-threshold" (list new-threshold)
+      ]
+    ]
+  )
+end
+
+to send-aggregating-messages-from-root
+  ; start end-of-round process
+  if is-log-level-info [
+    print (word "Start end-of-round process by aggregating triggers at the root " node-id)
+  ]
+  ; start aggregation
+  set IS_END_OF_ROUND true
+  foreach [child-ids] of node node-id [
+    cid -> send-message cid "aggregate-triggers" []
+  ]
+end
