@@ -1,4 +1,4 @@
-__includes [ "TreeFill.nls" "DDR-coin.nls" "CoinRand.nls" "RingRand.nls" "CT.nls" ]
+__includes [ "TreeFill.nls" "DDR-coin.nls" "CoinRand.nls" "RingRand.nls" "CT.nls" "utils.nls" ]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Global variables common to all DTC algorithms ;;
@@ -51,7 +51,7 @@ to setup
   clear-all
 
   ; control debug output here
-  set DEBUG_OUTPUT 2
+  set DEBUG_OUTPUT 0
   print (word "setup. num-nodes: " num-nodes)
   set num-nodes adjust-num-nodes
   print (word "adjusted num-nodes: " num-nodes)
@@ -90,18 +90,6 @@ to end-of-round-update [w-hat]
   set W_HAT_LAST_ROUND w-hat
 end
 
-to-report is-log-level-info
-  report DEBUG_OUTPUT >= 0
-end
-
-to-report is-log-level-debug
-  report DEBUG_OUTPUT >= 1
-end
-
-to-report is-log-level-trace
-  report DEBUG_OUTPUT >= 2
-end
-
 to-report adjust-num-nodes
   report (ifelse-value
     dtc-algo = "CoinRand" [ 2 ^ floor (log num-nodes 2) ]
@@ -109,18 +97,6 @@ to-report adjust-num-nodes
     [ tree-order ^ floor (log num-nodes tree-order) ]
     (dtc-algo = "RingRand")
     [ num-nodes ])
-end
-
-to setup-visual-settings
-  set-default-shape crnds "circle"
-  set-default-shape rrnds "circle"
-  set-default-shape tfs "circle"
-  set-default-shape ddrcs "circle"
-  set-default-shape csts "circle"
-  ask patches [
-    set pcolor white
-    set plabel-color black
-  ]
 end
 
 to setup-nodes
@@ -207,7 +183,6 @@ to create-one-algo
       create-csts 1 [
         set triggers-cnt 0
         set detects-cnt 0
-        set remaining-triggers 0
         set color green
       ]
   ])
@@ -296,7 +271,9 @@ to handle-msg [msg vals]
           (ifelse
             dtc-algo = "CoinRand" [ask crnd algo-id [handle-msg-crnd "initiate-next-round" (list w-hat)]]
             dtc-algo = "TreeFill" [ask tf algo-id [handle-msg-tf "initiate-next-round" (list w-hat)]]
-            dtc-algo = "DDR-coin" [ask ddrc algo-id [handle-msg-ddrc "initiate-next-round" (list w-hat)]])
+            dtc-algo = "DDR-coin" [ask ddrc algo-id [handle-msg-ddrc "initiate-next-round" (list w-hat)]]
+            dtc-algo = "CT"       [ask cst algo-id [handle-msg-cst "initiate-next-round" (list w-hat)]]
+          )
         ] [
           send-message parent-id "aggregate-triggers-response" (list (aggregated-triggers + num-triggers))
         ]
@@ -328,14 +305,6 @@ to send-message [to-id msg vals]
     ]
     handle-msg msg vals
   ]
-end
-
-to-report aggregate-detected-triggers-for-debug
-  let tot-trgs 0
-  ask nodes [
-    set tot-trgs (tot-trgs + num-triggers)
-  ]
-  report tot-trgs
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -415,7 +384,7 @@ INPUTBOX
 94
 165
 num-nodes
-9.0
+16.0
 1
 0
 Number
@@ -448,7 +417,7 @@ INPUTBOX
 126
 239
 tree-order
-3.0
+4.0
 1
 0
 Number
