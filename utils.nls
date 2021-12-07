@@ -12,6 +12,10 @@ to setup-visual-settings
   ]
 end
 
+to-report is-root [algo]
+  report 0 = [layer] of algo
+end
+
 to-report aggregate-detected-triggers-for-debug
   let tot-trgs 0
   ask nodes [

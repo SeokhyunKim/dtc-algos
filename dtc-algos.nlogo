@@ -181,6 +181,7 @@ to create-one-algo
   ]
   dtc-algo = "CT" [
       create-csts 1 [
+        set threshold floor(given-triggers / (2 * num-nodes))
         set triggers-cnt 0
         set detects-cnt 0
         set color green
@@ -384,7 +385,7 @@ INPUTBOX
 94
 165
 num-nodes
-16.0
+64.0
 1
 0
 Number
@@ -417,7 +418,7 @@ INPUTBOX
 126
 239
 tree-order
-4.0
+8.0
 1
 0
 Number
@@ -438,7 +439,7 @@ INPUTBOX
 242
 165
 given-triggers
-10000.0
+100000.0
 1
 0
 Number
