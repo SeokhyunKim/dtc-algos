@@ -36,7 +36,7 @@ to setup-cst-layers
   let other-nodes-width (world-width * (1 - tree-display-ratio))
   let xoffset other-nodes-width / (num-col + 1)
   let num-row ceiling (num-other-nodes / num-col)
-  set yoffset world-height / (num-row + 1)
+  set yoffset (world-height / (num-row + 1))
   let i 1
   let j 1
   while [ i <= num-row and (num-created < num-other-nodes) ]
@@ -49,18 +49,17 @@ to setup-cst-layers
         set layer cur-layer
       ]
       set cst-id (cst-id + 1)
-      set num-created num-created + 1
-      set j j + 1
+      set num-created (num-created + 1)
+      set j (j + 1)
     ]
-    set i i + 1
+    set i (i + 1)
   ]
   ask patch (max-pxcor + 3 - other-nodes-width / 2) max-pycor
   [ set plabel "Other nodes" ]
 
   if is-log-level-debug [
     ask csts [
-      print (word who ": node-id(" node-id "), threshold(" threshold "), triggers-cnt(" triggers-cnt
-        "), layer(" layer ")")
+      print (word who ": node-id(" node-id "), threshold(" threshold "), triggers-cnt(" triggers-cnt "), detects-cnt(" detects-cnt "), layer(" layer ")")
     ]
   ]
 end
@@ -81,12 +80,15 @@ to handle-msg-cst [msg vals]
     msg = "detect" [
       if is-log-level-trace [print (word "receiving detect, node " node-id " detects-cnt: " detects-cnt)]
       let detects-threshold floor(tree-order / 2)
-      set detects-cnt detects-cnt + 1
-      if detects-cnt >= detects-threshold [
-        ifelse is-root self [
+      set detects-cnt (detects-cnt + 1)
+      ifelse is-root self [
+        if detects-cnt >= tree-order or detects-cnt >= W_HAT_LAST_ROUND [
           ask self [send-aggregating-messages-from-root]
-        ] [
-          set detects-cnt detects-cnt - detects-threshold
+        ]
+      ] [
+        let detects-cnt-decrease (min (list detects-threshold threshold))
+        if detects-cnt >= detects-cnt-decrease [
+          set detects-cnt (detects-cnt - detects-cnt-decrease)
           let cur-layer layer
           let upper-node [node-id] of (one-of csts with [layer = cur-layer - 1])
           if is-log-level-trace [ print (word "send detect to " upper-node " which is in layer " (layer - 1)) ]
@@ -113,6 +115,7 @@ to handle-msg-cst [msg vals]
       set threshold new-threshold
       set color green
       set detects-cnt 0
+      if is-log-level-trace [ print (word "node-id " node-id " new threshold: " threshold ", detects-cnt: " detects-cnt) ]
       foreach [child-ids] of node node-id [
         cid -> send-message cid "propagate-threshold" (list new-threshold)
       ]

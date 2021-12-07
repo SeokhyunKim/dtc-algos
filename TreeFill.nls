@@ -91,10 +91,6 @@ to-report is-full [tf-algo]
   report -1 = get-empty-spot-in-fullary tf-algo
 end
 
-to-report is-root [tf-algo]
-  report 0 = [layer] of tf-algo
-end
-
 to-report is-last-internal-layer [tf-algo]
   let last-internal-layer (floor (log num-nodes tree-order)) - 1
   report last-internal-layer = [layer] of tf-algo
