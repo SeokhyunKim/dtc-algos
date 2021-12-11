@@ -82,17 +82,28 @@ to handle-msg-cst [msg vals]
       let detects-threshold floor(TREE-ORDER / 2)
       set detects-cnt (detects-cnt + 1)
       ifelse is-root self [
+        ; when the number of remaining triggers is smaller than NUM-NODES,
+        ; each incoming trigger will generate a detect message because threshold is 1,
+        ; and detect-threshold will be also 1 because detect-threshold is also set to 1.
+        ; this means all the remaining triggers generate detect messages and those will be
+        ; transmitted to a node of upper node uniformly random. Thus, root can just count
+        ; remaining triggers. This last round would need O(N) messages to count remaining triggers.
+        ; and max-rcvd would be O(1) because of the uniform random detect transmission to an upper layer. 
         ifelse W_HAT_LAST_ROUND <= NUM-NODES [
           if detects-cnt >= W_HAT_LAST_ROUND [
             ask self [send-aggregating-messages-from-root]
           ]
         ] [
+          ; for other cases, root check detects-cnt >= tree-order to start next round
+          ; (detects-cnt >= W_HAT_LAST_ROUND) is checked here just in case
           if detects-cnt >= TREE-ORDER or detects-cnt >= W_HAT_LAST_ROUND [
             ask self [send-aggregating-messages-from-root]
           ]
         ]
       ] [
         let detects-cnt-decrease detects-threshold
+        ; when remaining triggers is smaller than NUM-nodes, the number of detect can be smaller than NUM-NODES
+        ; even if threshold is 1. thus, need to select min(detects-threshold, threshold) to make sure CT finishes.
         if W_HAT_LAST_ROUND <= NUM-NODES [
           set detects-cnt-decrease (min (list detects-threshold threshold))
         ]
