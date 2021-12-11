@@ -69,14 +69,14 @@ to setup
   setup-algos
   reset-ticks
 
-  print (word "DTC algo: " dtc-algo)
+  print (word "DTC algo: " DTC-ALGO)
   print (word "given triggers: " given-triggers)
   print "Start the first round"
 
   if result-file [
-    file-open (word dtc-algo " " date-and-time ".txt")
-    file-print (word "# algo: " dtc-algo ", num-nodes: " NUM-NODES ", given-triggers: " given-triggers)
-    if dtc-algo = "DDR-coin" [
+    file-open (word DTC-ALGO " " date-and-time ".txt")
+    file-print (word "# algo: " DTC-ALGO ", num-nodes: " NUM-NODES ", given-triggers: " given-triggers)
+    if DTC-ALGO = "DDR-coin" [
       file-print(word "# predeploying-const: " predeploying-const)
     ]
     file-print "# round, NUM_EXCHANGED_MESSAGES, MAX_RCVD, w-hat, detected-triggers"
@@ -92,10 +92,10 @@ end
 
 to-report adjust-num-nodes
   report (ifelse-value
-    dtc-algo = "CoinRand" [ 2 ^ floor (log NUM-NODES 2) ]
-    (dtc-algo = "TreeFill" or dtc-algo = "DDR-coin" or dtc-algo = "CT")
+    DTC-ALGO = "CoinRand" [ 2 ^ floor (log NUM-NODES 2) ]
+    (DTC-ALGO = "TreeFill" or DTC-ALGO = "DDR-coin" or DTC-ALGO = "CT")
     [ TREE-ORDER ^ floor (log NUM-NODES TREE-ORDER) ]
-    (dtc-algo = "RingRand")
+    (DTC-ALGO = "RingRand")
     [ NUM-NODES ])
 end
 
@@ -140,7 +140,7 @@ end
 
 to create-one-algo
   (ifelse
-  dtc-algo = "CoinRand" [
+  DTC-ALGO = "CoinRand" [
       create-crnds 1 [
         set tau ceiling (given-triggers / (4 * NUM-NODES))
         set triggers-cnt 0
@@ -148,13 +148,13 @@ to create-one-algo
         set color green
     ]
   ]
-  dtc-algo = "RingRand" [
+  DTC-ALGO = "RingRand" [
       create-rrnds 1 [
         set p_collect (8 * NUM-NODES / given-triggers)
         set color green
     ]
   ]
-  dtc-algo = "TreeFill" [
+  DTC-ALGO = "TreeFill" [
       create-tfs 1 [
         set threshold floor (given-triggers / (2 * NUM-NODES))
         set triggers-cnt 0
@@ -167,7 +167,7 @@ to create-one-algo
         set color green
       ]
    ]
-  dtc-algo = "DDR-coin" [
+  DTC-ALGO = "DDR-coin" [
       create-ddrcs 1 [
         set p_detect NUM-NODES / given-triggers
         set fullary []
@@ -179,7 +179,7 @@ to create-one-algo
         set color green
       ]
   ]
-  dtc-algo = "CT" [
+  DTC-ALGO = "CT" [
       create-csts 1 [
         set threshold floor(given-triggers / (2 * NUM-NODES))
         set triggers-cnt 0
@@ -191,11 +191,11 @@ end
 
 to setup-algos
   (ifelse
-  dtc-algo = "CoinRand" [setup-crnd-layers]
-  dtc-algo = "RingRand" [setup-rrnd-topology]
-  dtc-algo = "TreeFill" [setup-tf-layers]
-  dtc-algo = "DDR-coin" [setup-ddrc-layers]
-  dtc-algo = "CT"       [setup-cst-layers])
+  DTC-ALGO = "CoinRand" [setup-crnd-layers]
+  DTC-ALGO = "RingRand" [setup-rrnd-topology]
+  DTC-ALGO = "TreeFill" [setup-tf-layers]
+  DTC-ALGO = "DDR-coin" [setup-ddrc-layers]
+  DTC-ALGO = "CT"       [setup-cst-layers])
 end
 
 to go
@@ -216,19 +216,19 @@ end
 to handle-trigger
   set num-triggers (num-triggers + 1)
   (ifelse
-  dtc-algo = "CoinRand" [
+  DTC-ALGO = "CoinRand" [
       ask crnd algo-id [handle-trigger-crnd]
   ]
-  dtc-algo = "RingRand" [
+  DTC-ALGO = "RingRand" [
       ask rrnd algo-id [handle-trigger-rrnd]
   ]
-  dtc-algo = "TreeFill" [
+  DTC-ALGO = "TreeFill" [
       ask tf algo-id [handle-trigger-tf]
   ]
-  dtc-algo = "DDR-coin" [
+  DTC-ALGO = "DDR-coin" [
       ask ddrc algo-id [handle-trigger-ddrc]
   ]
-  dtc-algo = "CT" [
+  DTC-ALGO = "CT" [
       ask cst algo-id [handle-trigger-cst]
   ])
 end
@@ -270,10 +270,10 @@ to handle-msg [msg vals]
             stop
           ]
           (ifelse
-            dtc-algo = "CoinRand" [ask crnd algo-id [handle-msg-crnd "initiate-next-round" (list w-hat)]]
-            dtc-algo = "TreeFill" [ask tf algo-id [handle-msg-tf "initiate-next-round" (list w-hat)]]
-            dtc-algo = "DDR-coin" [ask ddrc algo-id [handle-msg-ddrc "initiate-next-round" (list w-hat)]]
-            dtc-algo = "CT"       [ask cst algo-id [handle-msg-cst "initiate-next-round" (list w-hat)]]
+            DTC-ALGO = "CoinRand" [ask crnd algo-id [handle-msg-crnd "initiate-next-round" (list w-hat)]]
+            DTC-ALGO = "TreeFill" [ask tf algo-id [handle-msg-tf "initiate-next-round" (list w-hat)]]
+            DTC-ALGO = "DDR-coin" [ask ddrc algo-id [handle-msg-ddrc "initiate-next-round" (list w-hat)]]
+            DTC-ALGO = "CT"       [ask cst algo-id [handle-msg-cst "initiate-next-round" (list w-hat)]]
           )
         ] [
           send-message parent-id "aggregate-triggers-response" (list (aggregated-triggers + num-triggers))
@@ -285,11 +285,11 @@ to handle-msg [msg vals]
     ; DTC algo specific messages
     [
       (ifelse
-        dtc-algo = "CoinRand" [ask crnd algo-id [handle-msg-crnd msg vals]]
-        dtc-algo = "RingRand" [ask rrnd algo-id [handle-msg-rrnd msg vals]]
-        dtc-algo = "TreeFill" [ask tf algo-id [handle-msg-tf msg vals]]
-        dtc-algo = "DDR-coin" [ask ddrc algo-id [handle-msg-ddrc msg vals]]
-        dtc-algo = "CT"       [ask cst algo-id [handle-msg-cst msg vals]])
+        DTC-ALGO = "CoinRand" [ask crnd algo-id [handle-msg-crnd msg vals]]
+        DTC-ALGO = "RingRand" [ask rrnd algo-id [handle-msg-rrnd msg vals]]
+        DTC-ALGO = "TreeFill" [ask tf algo-id [handle-msg-tf msg vals]]
+        DTC-ALGO = "DDR-coin" [ask ddrc algo-id [handle-msg-ddrc msg vals]]
+        DTC-ALGO = "CT"       [ask cst algo-id [handle-msg-cst msg vals]])
     ]
   )
 end
@@ -374,8 +374,8 @@ CHOOSER
 50
 155
 95
-dtc-algo
-dtc-algo
+DTC-ALGO
+DTC-ALGO
 "TreeFill" "DDR-coin" "CoinRand" "RingRand" "CT"
 4
 
