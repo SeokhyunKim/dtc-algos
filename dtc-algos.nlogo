@@ -377,7 +377,7 @@ CHOOSER
 DTC-ALGO
 DTC-ALGO
 "TreeFill" "DDR-coin" "CoinRand" "RingRand" "CT"
-4
+2
 
 INPUTBOX
 18

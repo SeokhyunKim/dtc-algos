@@ -82,11 +82,20 @@ to handle-msg-cst [msg vals]
       let detects-threshold floor(TREE-ORDER / 2)
       set detects-cnt (detects-cnt + 1)
       ifelse is-root self [
-        if detects-cnt >= TREE-ORDER or detects-cnt >= W_HAT_LAST_ROUND [
-          ask self [send-aggregating-messages-from-root]
+        ifelse W_HAT_LAST_ROUND <= NUM-NODES [
+          if detects-cnt >= W_HAT_LAST_ROUND [
+            ask self [send-aggregating-messages-from-root]
+          ]
+        ] [
+          if detects-cnt >= TREE-ORDER or detects-cnt >= W_HAT_LAST_ROUND [
+            ask self [send-aggregating-messages-from-root]
+          ]
         ]
       ] [
-        let detects-cnt-decrease (min (list detects-threshold threshold))
+        let detects-cnt-decrease detects-threshold
+        if W_HAT_LAST_ROUND <= NUM-NODES [
+          set detects-cnt-decrease (min (list detects-threshold threshold))
+        ]
         if detects-cnt >= detects-cnt-decrease [
           set detects-cnt (detects-cnt - detects-cnt-decrease)
           let cur-layer layer
