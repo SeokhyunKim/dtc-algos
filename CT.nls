@@ -3,13 +3,13 @@ csts-own [node-id threshold triggers-cnt detects-cnt layer]
 
 ;; Cascading Thresholds procedures ------------------------------------------------------------------
 to setup-cst-layers
-  let last-internal-layer (floor (log num-nodes tree-order)) - 1
+  let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
   let tree-display-ratio 0.65
 
   ;; placing nodes for dual roles meaning interal node and leaf node
   let yoffset world-height / (last-internal-layer + 2)
   let cur-layer 0
-  let cst-id num-nodes
+  let cst-id NUM-NODES
   let root (cst cst-id)
   let total-internal-nodes 0
   while [cur-layer <= last-internal-layer] [
@@ -30,7 +30,7 @@ to setup-cst-layers
   ask patch ([pxcor] of root + 5) max-pycor [ set plabel "Internal Nodes (dual roles)" ]
 
   ;; remaining other nodes
-  let num-other-nodes (num-nodes - total-internal-nodes)
+  let num-other-nodes (NUM-NODES - total-internal-nodes)
   let num-created 0
   let num-col floor (sqrt num-other-nodes)
   let other-nodes-width (world-width * (1 - tree-display-ratio))
@@ -68,7 +68,7 @@ to handle-trigger-cst
   set triggers-cnt (triggers-cnt + 1)
   if triggers-cnt >= threshold [
     set triggers-cnt (triggers-cnt - threshold)
-    let last-internal-layer (floor (log num-nodes tree-order)) - 1
+    let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
     let internal-node [node-id] of (one-of csts with [layer = last-internal-layer])
     if is-log-level-trace [ print (word "send detect from leaf-layer to " internal-node " which is in layer " last-internal-layer) ]
     send-message internal-node "detect" []
@@ -99,7 +99,7 @@ to handle-msg-cst [msg vals]
     msg = "initiate-next-round" [
       let w-hat item 0 vals
       set CUR_ROUND (CUR_ROUND + 1)
-      let new-threshold floor(w-hat / (2 * num-nodes))
+      let new-threshold floor(w-hat / (2 * NUM-NODES))
       if new-threshold < 1 [set new-threshold 1]
       print (word "New round: " CUR_ROUND ", W-hat: " w-hat ", threshold: " new-threshold)
       set color green

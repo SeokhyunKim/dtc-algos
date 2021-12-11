@@ -52,9 +52,9 @@ to setup
 
   ; control debug output here
   set DEBUG_OUTPUT 0
-  print (word "setup. num-nodes: " num-nodes)
-  set num-nodes adjust-num-nodes
-  print (word "adjusted num-nodes: " num-nodes)
+  print (word "setup. num-nodes: " NUM-NODES)
+  set NUM-NODES adjust-num-nodes
+  print (word "adjusted num-nodes: " NUM-NODES)
 
   set CUR_ROUND 1
   set GEN_TRIGGERS 0
@@ -75,7 +75,7 @@ to setup
 
   if result-file [
     file-open (word dtc-algo " " date-and-time ".txt")
-    file-print (word "# algo: " dtc-algo ", num-nodes: " num-nodes ", given-triggers: " given-triggers)
+    file-print (word "# algo: " dtc-algo ", num-nodes: " NUM-NODES ", given-triggers: " given-triggers)
     if dtc-algo = "DDR-coin" [
       file-print(word "# predeploying-const: " predeploying-const)
     ]
@@ -92,15 +92,15 @@ end
 
 to-report adjust-num-nodes
   report (ifelse-value
-    dtc-algo = "CoinRand" [ 2 ^ floor (log num-nodes 2) ]
+    dtc-algo = "CoinRand" [ 2 ^ floor (log NUM-NODES 2) ]
     (dtc-algo = "TreeFill" or dtc-algo = "DDR-coin" or dtc-algo = "CT")
-    [ tree-order ^ floor (log num-nodes tree-order) ]
+    [ tree-order ^ floor (log NUM-NODES tree-order) ]
     (dtc-algo = "RingRand")
-    [ num-nodes ])
+    [ NUM-NODES ])
 end
 
 to setup-nodes
-  create-nodes num-nodes [
+  create-nodes NUM-NODES [
     set num-triggers 0
     set num-received-msgs 0
     set child-ids (list)
@@ -111,7 +111,7 @@ to setup-nodes
   ; parent-child relationship is for making tree for aggregation process happening at the end of some DTC algos.
   ; node 0's childs are 1 and 2. node 1's childs are 3 and 4. etc.
   let nid 0
-  while [nid < num-nodes] [
+  while [nid < NUM-NODES] [
     let pid floor ((nid - 1) / 2)
     ask node nid [set parent-id pid]
     if pid >= 0 [
@@ -122,7 +122,7 @@ to setup-nodes
   ; Let nodes and algos know each other's ids to make interaction easier.
   let next-id count nodes
   set nid 0
-  while [nid < num-nodes] [
+  while [nid < NUM-NODES] [
     ; create one new algo where the id of new algo begins at num-nodes.
     ; So, (node-algo) relations would be (0, num-nodes), (1, num-nodes + 1), ...
     create-one-algo
@@ -142,7 +142,7 @@ to create-one-algo
   (ifelse
   dtc-algo = "CoinRand" [
       create-crnds 1 [
-        set tau ceiling (given-triggers / (4 * num-nodes))
+        set tau ceiling (given-triggers / (4 * NUM-NODES))
         set triggers-cnt 0
         set coins-cnt 0
         set color green
@@ -150,13 +150,13 @@ to create-one-algo
   ]
   dtc-algo = "RingRand" [
       create-rrnds 1 [
-        set p_collect (8 * num-nodes / given-triggers)
+        set p_collect (8 * NUM-NODES / given-triggers)
         set color green
     ]
   ]
   dtc-algo = "TreeFill" [
       create-tfs 1 [
-        set threshold floor (given-triggers / (2 * num-nodes))
+        set threshold floor (given-triggers / (2 * NUM-NODES))
         set triggers-cnt 0
         set fullary []
         let i 0
@@ -169,7 +169,7 @@ to create-one-algo
    ]
   dtc-algo = "DDR-coin" [
       create-ddrcs 1 [
-        set p_detect num-nodes / given-triggers
+        set p_detect NUM-NODES / given-triggers
         set fullary []
         let i 0
         while [i < tree-order] [
@@ -181,7 +181,7 @@ to create-one-algo
   ]
   dtc-algo = "CT" [
       create-csts 1 [
-        set threshold floor(given-triggers / (2 * num-nodes))
+        set threshold floor(given-triggers / (2 * NUM-NODES))
         set triggers-cnt 0
         set detects-cnt 0
         set color green
@@ -382,9 +382,9 @@ dtc-algo
 INPUTBOX
 18
 105
-94
+104
 165
-num-nodes
+NUM-NODES
 64.0
 1
 0
@@ -434,7 +434,7 @@ Detect-tree-degree is only for TreeFill or DDR-coin
 1
 
 INPUTBOX
-99
+114
 105
 242
 165

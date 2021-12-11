@@ -3,7 +3,7 @@ ddrcs-own [node-id p_detect fullary layer]
 
 ;; TreeFill-p procedures ----------------------------------------------------------------------------
 to setup-ddrc-layers
-  let last-internal-layer (floor (log num-nodes tree-order)) - 1
+  let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
   let tree-display-ratio 0.65
 
   ; default predeploying-const
@@ -14,7 +14,7 @@ to setup-ddrc-layers
   ;; placing nodes for dual roles meaning interal node and leaf node
   let yoffset world-height / (last-internal-layer + 2)
   let cur-layer 0
-  let ddrc-id num-nodes
+  let ddrc-id NUM-NODES
   let root (ddrc ddrc-id)
   let total-internal-nodes 0
   while [cur-layer <= last-internal-layer] [
@@ -35,7 +35,7 @@ to setup-ddrc-layers
   ask patch ([pxcor] of root + 5) max-pycor [ set plabel "Internal Nodes (dual roles)" ]
 
   ;; remaining other nodes
-  let num-other-nodes (num-nodes - total-internal-nodes)
+  let num-other-nodes (NUM-NODES - total-internal-nodes)
   let num-created 0
   let num-col floor (sqrt num-other-nodes)
   let other-nodes-width (world-width * (1 - tree-display-ratio))
@@ -62,13 +62,13 @@ to setup-ddrc-layers
   ask patch (max-pxcor + 3 - other-nodes-width / 2) max-pycor
   [ set plabel "Other nodes" ]
 
-  let num-dummy-detects predeploying-const * sqrt num-nodes
+  let num-dummy-detects predeploying-const * sqrt NUM-NODES
   (ifelse
-    given-triggers < num-nodes [
-      set num-dummy-detects num-nodes - given-triggers
+    given-triggers < NUM-NODES [
+      set num-dummy-detects NUM-NODES - given-triggers
     ]
-    num-dummy-detects >= num-nodes [
-      set num-dummy-detects num-nodes - 1
+    num-dummy-detects >= NUM-NODES [
+      set num-dummy-detects NUM-NODES - 1
     ])
   if is-log-level-debug [print (word "Num dummy detect msgs: " num-dummy-detects)]
   set i 0
@@ -89,7 +89,7 @@ end
 to handle-trigger-ddrc
   let rnd random-float 1.0
   if rnd <= p_detect [
-    let last-internal-layer (floor (log num-nodes tree-order)) - 1
+    let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
     let internal-node [node-id] of (one-of ddrcs with [layer = last-internal-layer])
     if is-log-level-trace [ print (word "send detect from leaf-layer to " internal-node " which is in layer " last-internal-layer) ]
     send-message internal-node "detect" []
@@ -149,7 +149,7 @@ to handle-msg-ddrc [msg vals]
     msg = "initiate-next-round" [
       let w-hat item 0 vals
       set CUR_ROUND (CUR_ROUND + 1)
-      let new-p_detect num-nodes / w-hat
+      let new-p_detect NUM-NODES / w-hat
       print (word "New round: " CUR_ROUND ", W-hat: " w-hat ", p_detect: " new-p_detect)
 
       set p_detect new-p_detect
@@ -163,16 +163,16 @@ to handle-msg-ddrc [msg vals]
         cid -> send-message cid "propagate-p_detect" (list new-p_detect)
       ]
 
-      let num-dummy-detects predeploying-const * sqrt num-nodes
+      let num-dummy-detects predeploying-const * sqrt NUM-NODES
       (ifelse
-        w-hat < num-nodes [
-          set num-dummy-detects num-nodes - w-hat
+        w-hat < NUM-NODES [
+          set num-dummy-detects NUM-NODES - w-hat
         ]
-        num-dummy-detects >= num-nodes [
-          set num-dummy-detects num-nodes - 1
+        num-dummy-detects >= NUM-NODES [
+          set num-dummy-detects NUM-NODES - 1
         ])
       if is-log-level-debug [print (word "Num dummy detect msgs: " num-dummy-detects)]
-      let last-internal-layer (floor (log num-nodes tree-order)) - 1
+      let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
       set i 0
       while [i < num-dummy-detects] [
         let leaf-inner-node [node-id] of (one-of ddrcs with [layer = last-internal-layer])

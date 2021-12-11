@@ -3,13 +3,13 @@ crnds-own [node-id tau leaf-coin-layer triggers-cnt coins-cnt layer]
 
 ;; CoinRand procedures ------------------------------------------------------------------------------
 to setup-crnd-layers
-  let last-internal-layer (floor (log num-nodes 2)) - 1
+  let last-internal-layer (floor (log NUM-NODES 2)) - 1
   let tree-display-ratio 0.65
 
   ;; placing nodes for dual roles meaning interal node and leaf node
   let yoffset world-height / (last-internal-layer + 2)
   let cur-layer 0
-  let crnd-id num-nodes
+  let crnd-id NUM-NODES
   let root (crnd crnd-id)
   while [cur-layer <= last-internal-layer] [
     let num-nodes-in-layer (2 ^ cur-layer)
@@ -83,10 +83,10 @@ to handle-msg-crnd [msg vals]
     msg = "initiate-next-round" [
       let w-hat item 0 vals
       set CUR_ROUND (CUR_ROUND + 1)
-      set tau ceiling (w-hat / (4 * num-nodes))
-      if w-hat < num-nodes [
-        let k floor (log (2 * num-nodes / w-hat) 2) ;; THIS MIGHT BE A SMALL PROBLEM OF CoinRand. USED (2 * num-nodes) INSTEAD OF num-nodes TO FIX THE ISSUE.
-        set leaf-coin-layer ((floor (log num-nodes 2)) - k - 1)
+      set tau ceiling (w-hat / (4 * NUM-NODES))
+      if w-hat < NUM-NODES [
+        let k floor (log (2 * NUM-NODES / w-hat) 2) ;; THIS MIGHT BE A SMALL PROBLEM OF CoinRand. USED (2 * num-nodes) INSTEAD OF num-nodes TO FIX THE ISSUE.
+        set leaf-coin-layer ((floor (log NUM-NODES 2)) - k - 1)
         if leaf-coin-layer < 0 [ set leaf-coin-layer 0 ]
         print (word "New leaf-coin-layer: " leaf-coin-layer)
       ]

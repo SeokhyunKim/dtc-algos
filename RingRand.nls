@@ -5,10 +5,10 @@ rrnds-own [node-id p_collect next-rrnd-id]
 to setup-rrnd-topology
   let cur-node 0
   let r (world-height - 3) / 2
-  let unit_angle (360 / num-nodes)
-  while [cur-node < num-nodes] [
+  let unit_angle (360 / NUM-NODES)
+  while [cur-node < NUM-NODES] [
     ask rrnd [algo-id] of (node cur-node) [
-      set next-rrnd-id ((cur-node + 1) mod num-nodes)
+      set next-rrnd-id ((cur-node + 1) mod NUM-NODES)
       let angle (unit_angle * cur-node)
       let x (r * cos angle)
       let y (r * sin angle)
@@ -52,8 +52,8 @@ to handle-msg-rrnd [msg vals]
                     set CUR_ROUND (CUR_ROUND + 1)
                     let w-hat given-triggers - collected-trgs
                     end-of-round-update w-hat
-                    ifelse w-hat > (8 * num-nodes) [
-                        set p_collect (8 * num-nodes / w-hat)
+                    ifelse w-hat > (8 * NUM-NODES) [
+                        set p_collect (8 * NUM-NODES / w-hat)
                     ] [
                         set p_collect 1.0
                     ]
@@ -69,8 +69,8 @@ to handle-msg-rrnd [msg vals]
         msg = "next-round" [
             let w-hat (item 0 vals)
             let init-node-id (item 1 vals)
-            ifelse w-hat > (8 * num-nodes) [
-                set p_collect (8 * num-nodes / w-hat)
+            ifelse w-hat > (8 * NUM-NODES) [
+                set p_collect (8 * NUM-NODES / w-hat)
             ] [
                 set p_collect 1.0
             ]
