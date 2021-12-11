@@ -3,7 +3,7 @@ ddrcs-own [node-id p_detect fullary layer]
 
 ;; TreeFill-p procedures ----------------------------------------------------------------------------
 to setup-ddrc-layers
-  let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
+  let last-internal-layer (floor (log NUM-NODES TREE-ORDER)) - 1
   let tree-display-ratio 0.65
 
   ; default predeploying-const
@@ -18,7 +18,7 @@ to setup-ddrc-layers
   let root (ddrc ddrc-id)
   let total-internal-nodes 0
   while [cur-layer <= last-internal-layer] [
-    let num-nodes-in-layer (tree-order ^ cur-layer)
+    let num-nodes-in-layer (TREE-ORDER ^ cur-layer)
     set total-internal-nodes (total-internal-nodes + num-nodes-in-layer)
     let xoffset world-width * tree-display-ratio / (num-nodes-in-layer + 1)
     let x 1
@@ -89,7 +89,7 @@ end
 to handle-trigger-ddrc
   let rnd random-float 1.0
   if rnd <= p_detect [
-    let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
+    let last-internal-layer (floor (log NUM-NODES TREE-ORDER)) - 1
     let internal-node [node-id] of (one-of ddrcs with [layer = last-internal-layer])
     if is-log-level-trace [ print (word "send detect from leaf-layer to " internal-node " which is in layer " last-internal-layer) ]
     send-message internal-node "detect" []
@@ -154,7 +154,7 @@ to handle-msg-ddrc [msg vals]
 
       set p_detect new-p_detect
       let i 0
-      while [i < tree-order] [
+      while [i < TREE-ORDER] [
         set fullary replace-item i fullary 0
         set i i + 1
       ]
@@ -172,7 +172,7 @@ to handle-msg-ddrc [msg vals]
           set num-dummy-detects NUM-NODES - 1
         ])
       if is-log-level-debug [print (word "Num dummy detect msgs: " num-dummy-detects)]
-      let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
+      let last-internal-layer (floor (log NUM-NODES TREE-ORDER)) - 1
       set i 0
       while [i < num-dummy-detects] [
         let leaf-inner-node [node-id] of (one-of ddrcs with [layer = last-internal-layer])
@@ -186,7 +186,7 @@ to handle-msg-ddrc [msg vals]
       let new-p_detect item 0 vals
       set p_detect new-p_detect
       let i 0
-      while [i < tree-order] [
+      while [i < TREE-ORDER] [
         set fullary replace-item i fullary 0
         set i i + 1
       ]

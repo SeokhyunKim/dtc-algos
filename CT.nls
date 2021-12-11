@@ -3,7 +3,7 @@ csts-own [node-id threshold triggers-cnt detects-cnt layer]
 
 ;; Cascading Thresholds procedures ------------------------------------------------------------------
 to setup-cst-layers
-  let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
+  let last-internal-layer (floor (log NUM-NODES TREE-ORDER)) - 1
   let tree-display-ratio 0.65
 
   ;; placing nodes for dual roles meaning interal node and leaf node
@@ -13,7 +13,7 @@ to setup-cst-layers
   let root (cst cst-id)
   let total-internal-nodes 0
   while [cur-layer <= last-internal-layer] [
-    let num-nodes-in-layer (tree-order ^ cur-layer)
+    let num-nodes-in-layer (TREE-ORDER ^ cur-layer)
     set total-internal-nodes (total-internal-nodes + num-nodes-in-layer)
     let xoffset world-width * tree-display-ratio / (num-nodes-in-layer + 1)
     let x 1
@@ -68,7 +68,7 @@ to handle-trigger-cst
   set triggers-cnt (triggers-cnt + 1)
   if triggers-cnt >= threshold [
     set triggers-cnt (triggers-cnt - threshold)
-    let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
+    let last-internal-layer (floor (log NUM-NODES TREE-ORDER)) - 1
     let internal-node [node-id] of (one-of csts with [layer = last-internal-layer])
     if is-log-level-trace [ print (word "send detect from leaf-layer to " internal-node " which is in layer " last-internal-layer) ]
     send-message internal-node "detect" []
@@ -79,10 +79,10 @@ to handle-msg-cst [msg vals]
   (ifelse
     msg = "detect" [
       if is-log-level-trace [print (word "receiving detect, node " node-id " detects-cnt: " detects-cnt)]
-      let detects-threshold floor(tree-order / 2)
+      let detects-threshold floor(TREE-ORDER / 2)
       set detects-cnt (detects-cnt + 1)
       ifelse is-root self [
-        if detects-cnt >= tree-order or detects-cnt >= W_HAT_LAST_ROUND [
+        if detects-cnt >= TREE-ORDER or detects-cnt >= W_HAT_LAST_ROUND [
           ask self [send-aggregating-messages-from-root]
         ]
       ] [

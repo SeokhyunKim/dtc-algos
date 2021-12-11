@@ -3,7 +3,7 @@ tfs-own [node-id threshold triggers-cnt fullary layer]
 
 ;; TreeFill procedures ------------------------------------------------------------------------------
 to setup-tf-layers
-  let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
+  let last-internal-layer (floor (log NUM-NODES TREE-ORDER)) - 1
   let tree-display-ratio 0.65
 
   ;; placing nodes for dual roles meaning interal node and leaf node
@@ -13,7 +13,7 @@ to setup-tf-layers
   let root (tf tf-id)
   let total-internal-nodes 0
   while [cur-layer <= last-internal-layer] [
-    let num-nodes-in-layer (tree-order ^ cur-layer)
+    let num-nodes-in-layer (TREE-ORDER ^ cur-layer)
     set total-internal-nodes (total-internal-nodes + num-nodes-in-layer)
     let xoffset world-width * tree-display-ratio / (num-nodes-in-layer + 1)
     let x 1
@@ -69,7 +69,7 @@ to handle-trigger-tf
   set triggers-cnt (triggers-cnt + 1)
   if triggers-cnt >= threshold [
     set triggers-cnt (triggers-cnt - threshold)
-    let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
+    let last-internal-layer (floor (log NUM-NODES TREE-ORDER)) - 1
     let internal-node [node-id] of (one-of tfs with [layer = last-internal-layer])
     if is-log-level-trace [ print (word "send detect from leaf-layer to " internal-node " which is in layer " last-internal-layer) ]
     send-message internal-node "detect" []
@@ -78,7 +78,7 @@ end
 
 to-report get-empty-spot-in-fullary [tf-algo]
   let i 0
-  while [i < tree-order] [
+  while [i < TREE-ORDER] [
     if (item i ([fullary] of tf-algo)) <= 0 [
       report i
     ]
@@ -92,20 +92,20 @@ to-report is-full [tf-algo]
 end
 
 to-report is-last-internal-layer [tf-algo]
-  let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
+  let last-internal-layer (floor (log NUM-NODES TREE-ORDER)) - 1
   report last-internal-layer = [layer] of tf-algo
 end
 
 to-report get-parent-id [id]
-  report floor((id - 1) / tree-order)
+  report floor((id - 1) / TREE-ORDER)
 end
 
 to-report get-child-id [nd-id idx]
-  report (nd-id * tree-order + idx + 1)
+  report (nd-id * TREE-ORDER + idx + 1)
 end
 
 to-report get-child-idx [nd-id child-id]
-  report child-id - 1 - nd-id * tree-order
+  report child-id - 1 - nd-id * TREE-ORDER
 end
 
 to handle-msg-tf [msg vals]
@@ -159,8 +159,8 @@ to handle-msg-tf [msg vals]
             stop
           ]
           ; prepare next round
-          let leaf-layer floor (log NUM-NODES tree-order)
-          let num-detect-msgs tree-order ^ leaf-layer
+          let leaf-layer floor (log NUM-NODES TREE-ORDER)
+          let num-detect-msgs TREE-ORDER ^ leaf-layer
           let num-detected num-detect-msgs * threshold
           if (given-triggers - NUM_DETECTED_TRIGGERS) < 2 * NUM-NODES [
             set num-detected NUM-NODES
@@ -188,7 +188,7 @@ to handle-msg-tf [msg vals]
       print (word "New round: " CUR_ROUND ", W-hat: " w-hat ", threshold: " new-threshold)
       set threshold new-threshold
       let i 0
-      while [i < tree-order] [
+      while [i < TREE-ORDER] [
         set fullary replace-item i fullary 0
         set i i + 1
       ]
@@ -198,7 +198,7 @@ to handle-msg-tf [msg vals]
       ]
       if w-hat < NUM-NODES [
         let num-dummy-detects NUM-NODES - w-hat
-        let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
+        let last-internal-layer (floor (log NUM-NODES TREE-ORDER)) - 1
         set i 0
         while [i < num-dummy-detects] [
           let leaf-inner-node [node-id] of (one-of tfs with [layer = last-internal-layer])
@@ -212,7 +212,7 @@ to handle-msg-tf [msg vals]
       ask tfs [
         while [triggers-cnt >= threshold] [
           set triggers-cnt (triggers-cnt - threshold)
-          let last-internal-layer (floor (log NUM-NODES tree-order)) - 1
+          let last-internal-layer (floor (log NUM-NODES TREE-ORDER)) - 1
           let internal-node [node-id] of (one-of tfs with [layer = last-internal-layer])
           if is-log-level-trace [ print (word "send detect from leaf-layer to " internal-node " which is in layer " last-internal-layer) ]
           send-message internal-node "detect" []
@@ -223,7 +223,7 @@ to handle-msg-tf [msg vals]
       let new-threshold item 0 vals
       set threshold new-threshold
       let i 0
-      while [i < tree-order] [
+      while [i < TREE-ORDER] [
         set fullary replace-item i fullary 0
         set i i + 1
       ]

@@ -94,7 +94,7 @@ to-report adjust-num-nodes
   report (ifelse-value
     dtc-algo = "CoinRand" [ 2 ^ floor (log NUM-NODES 2) ]
     (dtc-algo = "TreeFill" or dtc-algo = "DDR-coin" or dtc-algo = "CT")
-    [ tree-order ^ floor (log NUM-NODES tree-order) ]
+    [ TREE-ORDER ^ floor (log NUM-NODES TREE-ORDER) ]
     (dtc-algo = "RingRand")
     [ NUM-NODES ])
 end
@@ -160,7 +160,7 @@ to create-one-algo
         set triggers-cnt 0
         set fullary []
         let i 0
-        while [i < tree-order] [
+        while [i < TREE-ORDER] [
           set fullary lput 0 fullary
           set i i + 1
         ]
@@ -172,7 +172,7 @@ to create-one-algo
         set p_detect NUM-NODES / given-triggers
         set fullary []
         let i 0
-        while [i < tree-order] [
+        while [i < TREE-ORDER] [
           set fullary lput 0 fullary
           set i i + 1
         ]
@@ -417,7 +417,7 @@ INPUTBOX
 179
 126
 239
-tree-order
+TREE-ORDER
 8.0
 1
 0
