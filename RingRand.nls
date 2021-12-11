@@ -50,7 +50,7 @@ to handle-msg-rrnd [msg vals]
                     ; end-of-round
                     set NUM_DETECTED_TRIGGERS collected-trgs
                     set CUR_ROUND (CUR_ROUND + 1)
-                    let w-hat given-triggers - collected-trgs
+                    let w-hat GIVEN-TRIGGERS - collected-trgs
                     end-of-round-update w-hat
                     ifelse w-hat > (8 * NUM-NODES) [
                         set p_collect (8 * NUM-NODES / w-hat)

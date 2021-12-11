@@ -151,8 +151,8 @@ to handle-msg-tf [msg vals]
             print (word "Start end-of-round process by aggregating triggers at the root " node-id)
           ]
           ; this is final round condition
-          if (given-triggers - NUM_DETECTED_TRIGGERS) < NUM-NODES [
-            set NUM_DETECTED_TRIGGERS given-triggers
+          if (GIVEN-TRIGGERS - NUM_DETECTED_TRIGGERS) < NUM-NODES [
+            set NUM_DETECTED_TRIGGERS GIVEN-TRIGGERS
             end-of-round-update 0
             print (word "[TreeFill] Aggregated triggers: " NUM_DETECTED_TRIGGERS ", verifying it with debug aggregation: " aggregate-detected-triggers-for-debug)
             print "DETECT ALL THE TRIGGERS!! stop simulation"
@@ -162,14 +162,14 @@ to handle-msg-tf [msg vals]
           let leaf-layer floor (log NUM-NODES TREE-ORDER)
           let num-detect-msgs TREE-ORDER ^ leaf-layer
           let num-detected num-detect-msgs * threshold
-          if (given-triggers - NUM_DETECTED_TRIGGERS) < 2 * NUM-NODES [
+          if (GIVEN-TRIGGERS - NUM_DETECTED_TRIGGERS) < 2 * NUM-NODES [
             set num-detected NUM-NODES
           ]
           set IS_END_OF_ROUND true
-          ifelse (given-triggers - NUM_DETECTED_TRIGGERS - num-detected) > NUM-NODES [
+          ifelse (GIVEN-TRIGGERS - NUM_DETECTED_TRIGGERS - num-detected) > NUM-NODES [
             set NUM_DETECTED_TRIGGERS NUM_DETECTED_TRIGGERS + num-detected
             print (word "[TreeFill] Aggregated triggers: " NUM_DETECTED_TRIGGERS)
-            let w-hat given-triggers - NUM_DETECTED_TRIGGERS
+            let w-hat GIVEN-TRIGGERS - NUM_DETECTED_TRIGGERS
             end-of-round-update w-hat
             send-message node-id "initiate-next-round" (list w-hat)
           ] [

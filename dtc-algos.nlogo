@@ -61,7 +61,7 @@ to setup
   set NUM_EXCHANGED_MESSAGES 0
   set MAX_RCVD 0
   set NUM_DETECTED_TRIGGERS 0
-  set W_HAT_LAST_ROUND given-triggers
+  set W_HAT_LAST_ROUND GIVEN-TRIGGERS
   set IS_END_OF_ROUND false
 
   setup-visual-settings
@@ -70,14 +70,14 @@ to setup
   reset-ticks
 
   print (word "DTC algo: " DTC-ALGO)
-  print (word "given triggers: " given-triggers)
+  print (word "given triggers: " GIVEN-TRIGGERS)
   print "Start the first round"
 
   if result-file [
     file-open (word DTC-ALGO " " date-and-time ".txt")
-    file-print (word "# algo: " DTC-ALGO ", num-nodes: " NUM-NODES ", given-triggers: " given-triggers)
+    file-print (word "# algo: " DTC-ALGO ", num-nodes: " NUM-NODES ", given-triggers: " GIVEN-TRIGGERS)
     if DTC-ALGO = "DDR-coin" [
-      file-print(word "# predeploying-const: " predeploying-const)
+      file-print(word "# predeploying-const: " PREDEPLOYING-CONST)
     ]
     file-print "# round, NUM_EXCHANGED_MESSAGES, MAX_RCVD, w-hat, detected-triggers"
   ]
@@ -142,7 +142,7 @@ to create-one-algo
   (ifelse
   DTC-ALGO = "CoinRand" [
       create-crnds 1 [
-        set tau ceiling (given-triggers / (4 * NUM-NODES))
+        set tau ceiling (GIVEN-TRIGGERS / (4 * NUM-NODES))
         set triggers-cnt 0
         set coins-cnt 0
         set color green
@@ -150,13 +150,13 @@ to create-one-algo
   ]
   DTC-ALGO = "RingRand" [
       create-rrnds 1 [
-        set p_collect (8 * NUM-NODES / given-triggers)
+        set p_collect (8 * NUM-NODES / GIVEN-TRIGGERS)
         set color green
     ]
   ]
   DTC-ALGO = "TreeFill" [
       create-tfs 1 [
-        set threshold floor (given-triggers / (2 * NUM-NODES))
+        set threshold floor (GIVEN-TRIGGERS / (2 * NUM-NODES))
         set triggers-cnt 0
         set fullary []
         let i 0
@@ -169,7 +169,7 @@ to create-one-algo
    ]
   DTC-ALGO = "DDR-coin" [
       create-ddrcs 1 [
-        set p_detect NUM-NODES / given-triggers
+        set p_detect NUM-NODES / GIVEN-TRIGGERS
         set fullary []
         let i 0
         while [i < TREE-ORDER] [
@@ -181,7 +181,7 @@ to create-one-algo
   ]
   DTC-ALGO = "CT" [
       create-csts 1 [
-        set threshold floor(given-triggers / (2 * NUM-NODES))
+        set threshold floor(GIVEN-TRIGGERS / (2 * NUM-NODES))
         set triggers-cnt 0
         set detects-cnt 0
         set color green
@@ -199,14 +199,14 @@ to setup-algos
 end
 
 to go
-  if NUM_DETECTED_TRIGGERS >= given-triggers [
+  if NUM_DETECTED_TRIGGERS >= GIVEN-TRIGGERS [
     print (word "Simulation stopped. NUM_DETECTED_TRIGGERS: " NUM_DETECTED_TRIGGERS ", num-generated-triggers: " GEN_TRIGGERS)
     if result-file [
       file-close
     ]
     stop
   ]
-  if (GEN_TRIGGERS < given-triggers) and (not IS_END_OF_ROUND) [
+  if (GEN_TRIGGERS < GIVEN-TRIGGERS) and (not IS_END_OF_ROUND) [
     ask one-of nodes [ handle-trigger ]
     set GEN_TRIGGERS (GEN_TRIGGERS + 1)
   ]
@@ -262,7 +262,7 @@ to handle-msg [msg vals]
             print (word "Aggregated triggers: " NUM_DETECTED_TRIGGERS)
           ]
 
-          let w-hat given-triggers - NUM_DETECTED_TRIGGERS
+          let w-hat GIVEN-TRIGGERS - NUM_DETECTED_TRIGGERS
           end-of-round-update w-hat
 
           if w-hat <= 0 [
@@ -309,10 +309,10 @@ to send-message [to-id msg vals]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-251
-11
-769
-330
+263
+14
+781
+333
 -1
 -1
 10.0
@@ -438,7 +438,7 @@ INPUTBOX
 105
 242
 165
-given-triggers
+GIVEN-TRIGGERS
 100000.0
 1
 0
@@ -458,7 +458,7 @@ NUM_DETECTED_TRIGGERS
 PLOT
 24
 419
-766
+781
 657
 The Number of Exchanged Messages and Detected Triggers
 tick
@@ -488,19 +488,19 @@ MAX_RCVD
 INPUTBOX
 17
 252
-126
+157
 312
-predeploying-const
-2.0
+PREDEPLOYING-CONST
+3.0
 1
 0
 Number
 
 TEXTBOX
-132
-245
-243
-315
+161
+249
+262
+319
 DDR-coin predeploys some detect messages at the begining of each round.
 11
 0.0

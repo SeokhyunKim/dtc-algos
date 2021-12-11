@@ -7,8 +7,8 @@ to setup-ddrc-layers
   let tree-display-ratio 0.65
 
   ; default predeploying-const
-  if predeploying-const <= 0 [
-    set predeploying-const 4
+  if PREDEPLOYING-CONST <= 0 [
+    set PREDEPLOYING-CONST 4
   ]
 
   ;; placing nodes for dual roles meaning interal node and leaf node
@@ -62,10 +62,10 @@ to setup-ddrc-layers
   ask patch (max-pxcor + 3 - other-nodes-width / 2) max-pycor
   [ set plabel "Other nodes" ]
 
-  let num-dummy-detects predeploying-const * sqrt NUM-NODES
+  let num-dummy-detects PREDEPLOYING-CONST * sqrt NUM-NODES
   (ifelse
-    given-triggers < NUM-NODES [
-      set num-dummy-detects NUM-NODES - given-triggers
+    GIVEN-TRIGGERS < NUM-NODES [
+      set num-dummy-detects NUM-NODES - GIVEN-TRIGGERS
     ]
     num-dummy-detects >= NUM-NODES [
       set num-dummy-detects NUM-NODES - 1
@@ -163,7 +163,7 @@ to handle-msg-ddrc [msg vals]
         cid -> send-message cid "propagate-p_detect" (list new-p_detect)
       ]
 
-      let num-dummy-detects predeploying-const * sqrt NUM-NODES
+      let num-dummy-detects PREDEPLOYING-CONST * sqrt NUM-NODES
       (ifelse
         w-hat < NUM-NODES [
           set num-dummy-detects NUM-NODES - w-hat
