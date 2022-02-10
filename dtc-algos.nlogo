@@ -385,7 +385,7 @@ INPUTBOX
 104
 165
 NUM-NODES
-512.0
+4096.0
 1
 0
 Number
@@ -428,7 +428,7 @@ TEXTBOX
 181
 239
 228
-Detect-tree-degree is only for TreeFill or DDR-coin
+TREE-ORDER is for TreeFill, DDR-coin, or CT
 11
 0.0
 1

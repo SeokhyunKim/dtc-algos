@@ -103,6 +103,7 @@ to handle-msg-crnd [msg vals]
       set tau item 0 vals
       set leaf-coin-layer item 1 vals
       set coins-cnt 0
+      set triggers-cnt 0
       set color green
       foreach [child-ids] of node node-id [
         cid -> send-message cid "propagate-tau" vals

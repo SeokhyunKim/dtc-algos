@@ -141,6 +141,7 @@ to handle-msg-cst [msg vals]
       set threshold new-threshold
       set color green
       set detects-cnt 0
+      set triggers-cnt 0
       if is-log-level-trace [ print (word "node-id " node-id " new threshold: " threshold ", detects-cnt: " detects-cnt) ]
       foreach [child-ids] of node node-id [
         cid -> send-message cid "propagate-threshold" (list new-threshold)
