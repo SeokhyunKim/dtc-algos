@@ -66,13 +66,20 @@ end
 
 to handle-trigger-cst
   set triggers-cnt (triggers-cnt + 1)
-  if triggers-cnt >= threshold [
-    set triggers-cnt (triggers-cnt - threshold)
-    let last-internal-layer (floor (log NUM-NODES TREE-ORDER)) - 1
-    let internal-node [node-id] of (one-of csts with [layer = last-internal-layer])
-    if is-log-level-trace [ print (word "send detect from leaf-layer to " internal-node " which is in layer " last-internal-layer) ]
-    send-message internal-node "detect" []
-  ]
+  (ifelse
+    (threshold > 1) and (triggers-cnt >= threshold) [
+      set triggers-cnt (triggers-cnt - threshold)
+      let last-internal-layer (floor (log NUM-NODES TREE-ORDER)) - 1
+      let internal-node [node-id] of (one-of csts with [layer = last-internal-layer])
+      if is-log-level-trace [ print (word "send detect from leaf-layer to " internal-node " which is in layer " last-internal-layer) ]
+      send-message internal-node "detect" []
+    ]
+    threshold = 1 [
+      set triggers-cnt (triggers-cnt - threshold)
+      let root-node 0
+      send-message root-node "detect" []
+    ]
+  )
 end
 
 to handle-msg-cst [msg vals]
@@ -89,7 +96,8 @@ to handle-msg-cst [msg vals]
         ; transmitted to a node of upper node uniformly random. Thus, root can just count
         ; remaining triggers. This last round would need O(N) messages to count remaining triggers.
         ; and max-rcvd would be O(1) because of the uniform random detect transmission to an upper layer. 
-        ifelse W_HAT_LAST_ROUND <= NUM-NODES [
+        ;;ifelse W_HAT_LAST_ROUND <= (2 * NUM-NODES) [
+        ifelse threshold = 1 [
           if detects-cnt >= W_HAT_LAST_ROUND [
             ask self [send-aggregating-messages-from-root]
           ]
@@ -101,18 +109,16 @@ to handle-msg-cst [msg vals]
           ]
         ]
       ] [
-        let detects-cnt-decrease detects-threshold
-        ; when remaining triggers is smaller than NUM-nodes, the number of detect can be smaller than NUM-NODES
-        ; even if threshold is 1. thus, need to select min(detects-threshold, threshold) to make sure CT finishes.
-        if W_HAT_LAST_ROUND <= NUM-NODES [
-          set detects-cnt-decrease (min (list detects-threshold threshold))
-        ]
-        if detects-cnt >= detects-cnt-decrease [
-          set detects-cnt (detects-cnt - detects-cnt-decrease)
-          let cur-layer layer
-          let upper-node [node-id] of (one-of csts with [layer = cur-layer - 1])
-          if is-log-level-trace [ print (word "send detect to " upper-node " which is in layer " (layer - 1)) ]
-          send-message upper-node "detect" []
+        ; when threshold <= 1, it is final round and all the detect messages should be already sent to the root.
+        ; so checking if threshold > 1 and forward detect to an upper layer
+        if threshold > 1 [
+          if detects-cnt >= detects-threshold [
+            set detects-cnt (detects-cnt - detects-threshold)
+            let cur-layer layer
+            let upper-node [node-id] of (one-of csts with [layer = cur-layer - 1])
+            if is-log-level-trace [ print (word "send detect to " upper-node " which is in layer " (layer - 1)) ]
+            send-message upper-node "detect" []
+          ]
         ]
       ]
     ]
